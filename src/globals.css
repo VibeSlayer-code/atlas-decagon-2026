@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  :root {
+    --background: 255 45% 8%;
+    --foreground: 210 20% 96%;
+    --card: 258 48% 11%;
+    --card-foreground: 210 20% 96%;
+    --popover: 258 48% 11%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 276 90% 38%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 333 92% 56%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 255 30% 16%;
+    --muted-foreground: 240 14% 74%;
+    --accent: 258 86% 34%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 260 26% 24%;
+    --input: 260 26% 24%;
+    --ring: 309 77% 40%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 255 52% 6%;
+    --foreground: 210 20% 97%;
+    --card: 260 52% 9%;
+    --card-foreground: 210 20% 97%;
+    --popover: 260 52% 9%;
+    --popover-foreground: 210 20% 97%;
+    --primary: 276 90% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 333 92% 56%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 260 34% 14%;
+    --muted-foreground: 255 12% 68%;
+    --accent: 258 86% 34%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 260 30% 20%;
+    --input: 260 30% 20%;
+    --ring: 309 77% 40%;
+  }
+}
+
+.lab-bg::before {
+  overflow: hidden;
+  max-width: 100vw;
+  max-height: 100vh;
+  box-sizing: border-box;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
