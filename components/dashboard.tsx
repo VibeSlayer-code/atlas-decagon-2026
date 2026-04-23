@@ -6,7 +6,7 @@ import {
   Settings, MessageCircle, BookOpen, Zap, FileText,
   User, Bot, Home, GraduationCap, ChevronDown, Minus, Plus, ChevronLeft
 } from "lucide-react"
-import { BentoGrid, itemsSample } from "./ui/bento-grid"
+import { BentoGrid, type BentoItem } from "./ui/bento-grid"
 import { BeamsBackground } from "./ui/beams-background"
 import { AgentChat } from "./ui/agent-chat"
 import ProfilePage from "./ui/profile-page"
@@ -26,7 +26,6 @@ function DashboardInner() {
   const [timeLeft, setTimeLeft] = useState(25 * 60)
   const [isActive, setIsActive] = useState(false)
   const [sidebarHovered, setSidebarHovered] = useState(false)
-  const [analyticsTab, setAnalyticsTab] = useState("overview")
   const [studyExpanded, setStudyExpanded] = useState(true)
   const focusDuration = settings.focusTime
   const setFocusDuration = (v: number) => settings.setFocusTime?.(v)
@@ -55,8 +54,8 @@ function DashboardInner() {
   const minutes = Math.floor(timeLeft / 60)
   const seconds = timeLeft % 60
   const navItems = [
-    { id: "ai", icon: Bot, label: "AI" },
     { id: "home", icon: Home, label: "Home" },
+    { id: "ai", icon: Bot, label: "AI" },
     { id: "study", icon: GraduationCap, label: "Study" },
   ]
   const studySubItems = [
@@ -65,40 +64,88 @@ function DashboardInner() {
     { id: "mindmaps", label: "Mindmaps" },
     { id: "quizzes", label: "Quizzes" },
   ]
-  const analyticsTabs = [
-    { id: "overview", label: "Overview" },
-    { id: "chats", label: "Chats" },
-    { id: "flashcards", label: "Flashcards" },
-    { id: "notes", label: "Notes" },
+  
+  // Load statistics from localStorage
+  const [stats, setStats] = useState({
+    flashcards: 0,
+    notes: 0,
+    quizzes: 0,
+    mindmaps: 0,
+    totalCards: 0,
+  })
+
+  useEffect(() => {
+    const loadStats = () => {
+      try {
+        const flashcards = JSON.parse(localStorage.getItem("atlas_hackathon_flashcards") || "[]")
+        const notes = JSON.parse(localStorage.getItem("atlas_hackathon_notes") || "[]")
+        const quizzes = JSON.parse(localStorage.getItem("atlas_hackathon_quizzes") || "[]")
+        const mindmaps = JSON.parse(localStorage.getItem("atlas_hackathon_mindmaps") || "[]")
+        
+        const totalCards = flashcards.reduce((sum: number, deck: any) => 
+          sum + (deck.content?.cards?.length || 0), 0)
+
+        setStats({
+          flashcards: flashcards.length,
+          notes: notes.length,
+          quizzes: quizzes.length,
+          mindmaps: mindmaps.length,
+          totalCards,
+        })
+      } catch (e) {
+        console.error("Failed to load stats:", e)
+      }
+    }
+
+    loadStats()
+    // Reload stats when returning to dashboard
+    const interval = setInterval(loadStats, 2000)
+    return () => clearInterval(interval)
+  }, [activeTab])
+
+  const bentoItems: BentoItem[] = [
+    {
+      title: "Flashcards",
+      meta: "Study Smart",
+      description: "Create and review flashcards with spaced repetition",
+      icon: <Zap className="w-4 h-4 text-[#F72585]" />,
+      status: "Active",
+      tags: ["study", "review", "learn"],
+      onClick: () => setActiveTab("flashcards"),
+      dotColor: "#F72585",
+    },
+    {
+      title: "Notes",
+      meta: "Organize",
+      description: "Take detailed notes and organize your study materials",
+      icon: <FileText className="w-4 h-4 text-[#B5179E]" />,
+      status: "Active",
+      tags: ["notes", "organize", "write"],
+      onClick: () => setActiveTab("notes"),
+      dotColor: "#B5179E",
+    },
+    {
+      title: "Mindmaps",
+      meta: "Visualize",
+      description: "Create visual mindmaps to connect concepts",
+      icon: <GraduationCap className="w-4 h-4 text-[#7209B7]" />,
+      status: "Active",
+      tags: ["visual", "connect", "map"],
+      onClick: () => setActiveTab("mindmaps"),
+      dotColor: "#7209B7",
+    },
+    {
+      title: "Quizzes",
+      meta: "Test Yourself",
+      description: "Practice with interactive quizzes and track progress",
+      icon: <BookOpen className="w-4 h-4 text-[#560BAD]" />,
+      status: "Active",
+      tags: ["quiz", "test", "practice"],
+      onClick: () => setActiveTab("quizzes"),
+      dotColor: "#560BAD",
+    },
   ]
-  const analyticsStats = {
-    overview: [
-      { label: "Chats Done", value: "0", icon: MessageCircle },
-      { label: "Flashcards", value: "0", icon: Zap },
-      { label: "Notes Created", value: "0", icon: FileText },
-      { label: "Lessons", value: "0", icon: BookOpen },
-    ],
-    chats: [
-      { label: "Total Chats", value: "0", icon: MessageCircle },
-      { label: "This Week", value: "0", icon: MessageCircle },
-      { label: "Avg Length", value: "0", icon: MessageCircle },
-      { label: "Saved", value: "0", icon: MessageCircle },
-    ],
-    flashcards: [
-      { label: "Created", value: "0", icon: Zap },
-      { label: "Reviewed", value: "0", icon: Zap },
-      { label: "Mastered", value: "0", icon: Zap },
-      { label: "Decks", value: "0", icon: Zap },
-    ],
-    notes: [
-      { label: "Total Notes", value: "0", icon: FileText },
-      { label: "This Week", value: "0", icon: FileText },
-      { label: "Shared", value: "0", icon: FileText },
-      { label: "Favorites", value: "0", icon: FileText },
-    ],
-  }
-  const currentStats = analyticsStats[analyticsTab as keyof typeof analyticsStats] || analyticsStats.overview
-  const chartDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
   const SIDEBAR_W = 64
   const stagger = {
     hidden: { opacity: 0 },
@@ -288,53 +335,62 @@ function DashboardInner() {
                     </div>
                   </div>
                 </motion.div>
-                { }
+                {/* Bento Grid */}
                 <motion.div variants={fadeUp}>
-                  <BentoGrid items={itemsSample} />
+                  <BentoGrid items={bentoItems} />
                 </motion.div>
                 { }
                 <motion.div
                   variants={fadeUp}
-                  className="bg-[#140a25]/90 rounded-lg border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden flex-1"
+                  className="bg-[#140a25]/90 rounded-lg border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden"
                 >
-                  <div className="relative p-5">
-                    { }
-                    <div className="flex items-center gap-1 mb-5 border-b border-white/[0.04] pb-3">
-                      {analyticsTabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          onClick={() => setAnalyticsTab(tab.id)}
-                          className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors duration-150 cursor-pointer ${analyticsTab === tab.id
-                            ? "bg-white/[0.07] text-white/80"
-                            : "text-white/25 hover:text-white/40 hover:bg-white/[0.03]"
-                            }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
-                    { }
-                    <div className="grid grid-cols-4 gap-3 mb-5">
-                      {currentStats.map((stat) => (
-                        <div key={stat.label} className="bg-white/[0.03] rounded-md p-4 border border-white/[0.03]">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <stat.icon className="w-3 h-3 text-white/15" />
-                            <span className="text-white/20 text-[10px] uppercase tracking-wider">{stat.label}</span>
+                  <div className="relative p-6">
+                    <h2 className="text-lg font-semibold text-white/90 mb-6">Your Progress</h2>
+                    
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gradient-to-br from-[#7209B7]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#7209B7]/20 flex items-center justify-center">
+                            <Zap className="w-4 h-4 text-[#7209B7]" />
                           </div>
-                          <span className="text-white/90 text-2xl font-semibold font-numeric tabular-nums">{stat.value}</span>
                         </div>
-                      ))}
-                    </div>
-                    { }
-                    <div>
-                      <p className="text-white/15 text-[10px] uppercase tracking-wider mb-2">Activity</p>
-                      <div className="flex items-end gap-2 h-12">
-                        {chartDays.map((day) => (
-                          <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full bg-white/[0.03] rounded-sm" style={{ height: 4 }} />
-                            <span className="text-[8px] text-white/12 font-mono">{day}</span>
+                        <div className="text-3xl font-bold text-white/95 mb-1">{stats.flashcards}</div>
+                        <div className="text-xs text-white/40 uppercase tracking-wider">Flashcard Decks</div>
+                        <div className="text-xs text-white/30 mt-1">{stats.totalCards} total cards</div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-[#F72585]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#F72585]/20 flex items-center justify-center">
+                            <FileText className="w-4 h-4 text-[#F72585]" />
                           </div>
-                        ))}
+                        </div>
+                        <div className="text-3xl font-bold text-white/95 mb-1">{stats.notes}</div>
+                        <div className="text-xs text-white/40 uppercase tracking-wider">Notes</div>
+                        <div className="text-xs text-white/30 mt-1">Study materials</div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-[#4CC9F0]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#4CC9F0]/20 flex items-center justify-center">
+                            <BookOpen className="w-4 h-4 text-[#4CC9F0]" />
+                          </div>
+                        </div>
+                        <div className="text-3xl font-bold text-white/95 mb-1">{stats.quizzes}</div>
+                        <div className="text-xs text-white/40 uppercase tracking-wider">Quizzes</div>
+                        <div className="text-xs text-white/30 mt-1">Practice tests</div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-[#B5179E]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#B5179E]/20 flex items-center justify-center">
+                            <MessageCircle className="w-4 h-4 text-[#B5179E]" />
+                          </div>
+                        </div>
+                        <div className="text-3xl font-bold text-white/95 mb-1">{stats.mindmaps}</div>
+                        <div className="text-xs text-white/40 uppercase tracking-wider">Mindmaps</div>
+                        <div className="text-xs text-white/30 mt-1">Visual learning</div>
                       </div>
                     </div>
                   </div>
@@ -360,10 +416,10 @@ function DashboardInner() {
                     )}
                   </div>
                 </motion.div>
-                { }
+                {/* Focus Timer */}
                 <motion.div
                   variants={fadeUp}
-                  className="bg-[#0a0512]/95 rounded-[2.5rem] border border-white/[0.08] p-6 relative overflow-hidden flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.6)] self-center w-full max-w-[320px] min-h-[420px] group"
+                  className="bg-[#140a25]/90 rounded-xl border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] p-6 relative overflow-hidden"
                 >
                   {timerView === "main" ? (
                     <motion.div

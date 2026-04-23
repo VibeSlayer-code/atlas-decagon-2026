@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Paperclip, Maximize, ZoomIn, ZoomOut, Target, Sparkles, ChevronRight, Info } from "lucide-react"
+import { X, Paperclip, Maximize, ZoomIn, ZoomOut, Target, Sparkles, ChevronRight, Info, Save, Check } from "lucide-react"
 import { useSettings } from "@/lib/settings-context"
 import { cn } from "@/lib/utils"
 import { ShiningText } from "@/components/ui/shining-text"
@@ -64,6 +64,7 @@ export function StudyBuddyWorkspace(props: Props) {
 
   const listRef = useRef<HTMLDivElement>(null)
   const [activeArtifactIndex, setActiveArtifactIndex] = useState(0)
+  const [savedArtifacts, setSavedArtifacts] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const el = listRef.current
@@ -84,6 +85,38 @@ export function StudyBuddyWorkspace(props: Props) {
     }
     return null
   }, [messages])
+
+  const handleSaveArtifact = useCallback(() => {
+    if (!activeArtifact) return
+
+    try {
+      const storageKey = `atlas_hackathon_${activeArtifact.kind === "flashcards" ? "flashcards" : activeArtifact.kind}`
+      const existing = JSON.parse(localStorage.getItem(storageKey) || "[]")
+
+      const newItem = {
+        id: crypto.randomUUID(),
+        title: activeArtifact.title,
+        content: activeArtifact.content,
+        created_at: new Date().toISOString(),
+      }
+
+      const updated = [newItem, ...existing]
+      localStorage.setItem(storageKey, JSON.stringify(updated))
+      
+      setSavedArtifacts(prev => new Set(prev).add(activeArtifactIndex))
+      
+      // Reset saved state after 2 seconds
+      setTimeout(() => {
+        setSavedArtifacts(prev => {
+          const next = new Set(prev)
+          next.delete(activeArtifactIndex)
+          return next
+        })
+      }, 2000)
+    } catch (error) {
+      console.error("Failed to save artifact:", error)
+    }
+  }, [activeArtifact, activeArtifactIndex])
 
   return (
     <motion.div
@@ -277,43 +310,68 @@ export function StudyBuddyWorkspace(props: Props) {
                   <div className="text-2xl font-bold tracking-tight text-white/95">{activeArtifact.title}</div>
                 </div>
 
-                {artifacts.length > 1 && (
-                  <div className="pointer-events-auto flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] max-w-[50%]">
-                    {artifacts.map((artifact, idx) => (
-                      <div
-                        key={idx}
-                        className={cn(
-                          "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap shadow-sm backdrop-blur-md",
-                          activeArtifactIndex === idx
-                            ? "bg-white/10 text-white border border-white/20"
-                            : "bg-white/[0.03] text-white/60 hover:text-white hover:bg-white/[0.06] border border-white/[0.05]"
-                        )}
-                      >
-                        <button
-                          onClick={() => setActiveArtifactIndex(idx)}
-                          className="flex-1 text-left"
+                <div className="pointer-events-auto flex items-center gap-2">
+                  {(activeArtifact.kind === "notes" || activeArtifact.kind === "flashcards") && (
+                    <button
+                      onClick={handleSaveArtifact}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm",
+                        savedArtifacts.has(activeArtifactIndex)
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : "bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white border border-white/[0.08] hover:border-white/[0.15]"
+                      )}
+                    >
+                      {savedArtifacts.has(activeArtifactIndex) ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Saved
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {artifacts.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] max-w-[50%]">
+                      {artifacts.map((artifact, idx) => (
+                        <div
+                          key={idx}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap shadow-sm backdrop-blur-md",
+                            activeArtifactIndex === idx
+                              ? "bg-white/10 text-white border border-white/20"
+                              : "bg-white/[0.03] text-white/60 hover:text-white hover:bg-white/[0.06] border border-white/[0.05]"
+                          )}
                         >
-                          {artifact.kind.charAt(0).toUpperCase() + artifact.kind.slice(1)}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const newArtifacts = artifacts.filter((_, i) => i !== idx);
-                            setArtifacts(newArtifacts);
-                            if (newArtifacts.length === 0) {
-                              onBack();
-                            } else {
-                              setActiveArtifactIndex(Math.min(idx, newArtifacts.length - 1));
-                            }
-                          }}
-                          className="p-1 hover:bg-white/20 rounded transition-colors flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <button
+                            onClick={() => setActiveArtifactIndex(idx)}
+                            className="flex-1 text-left"
+                          >
+                            {artifact.kind.charAt(0).toUpperCase() + artifact.kind.slice(1)}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newArtifacts = artifacts.filter((_, i) => i !== idx);
+                              setArtifacts(newArtifacts);
+                              if (newArtifacts.length === 0) {
+                                onBack();
+                              } else {
+                                setActiveArtifactIndex(Math.min(idx, newArtifacts.length - 1));
+                              }
+                            }}
+                            className="p-1 hover:bg-white/20 rounded transition-colors flex items-center justify-center"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className={cn(
@@ -360,7 +418,7 @@ function CanvasArtifact({ artifact, onQuickPrompt }: { artifact: StudyBuddyArtif
           <MorphingCardStack
             defaultLayout="stack"
             className="w-full max-w-[600px] aspect-[4/3]"
-            cards={artifact.content.cards.map((c, idx) => ({
+            cards={artifact.content.cards.map((c: { front: string; back: string }, idx: number) => ({
               id: `${idx + 1}`,
               title: formatPowerNotation(c.front),
               description: formatPowerNotation(c.back),
@@ -848,7 +906,7 @@ function formatMarkdown(text: string) {
         continue;
       }
 
-      const cells = line.split('|').map(c => c.trim());
+      const cells = line.split('|').map((c: string) => c.trim());
       // Strip starting and trailing empty elements derived from outer pipe splits
       if (cells[0] === '') cells.shift();
       if (cells[cells.length - 1] === '') cells.pop();

@@ -1,12 +1,14 @@
 "use client";
 import { cn } from "@/lib/utils";
 import {
-    CheckCircle,
-    TrendingUp,
-    Video,
-    Globe,
+    Zap,
+    FileText,
+    Brain,
+    ClipboardList,
 } from "lucide-react";
 import React from "react";
+import { motion } from "framer-motion";
+
 export interface BentoItem {
     title: string;
     description: string;
@@ -17,71 +19,86 @@ export interface BentoItem {
     cta?: string;
     colSpan?: number;
     hasPersistentHover?: boolean;
+    onClick?: () => void;
+    dotColor?: string;
 }
+
 interface BentoGridProps {
     items: BentoItem[];
 }
+
 export const itemsSample: BentoItem[] = [
     {
-        title: "test test test",
-        meta: "test test test",
-        description: "test test test",
-        icon: <TrendingUp className="w-4 h-4 text-[#F72585]" />,
-        status: "test test test",
-        tags: ["test", "test", "test"],
+        title: "Flashcards",
+        meta: "Study Smart",
+        description: "Create and review flashcards with spaced repetition",
+        icon: <Zap className="w-4 h-4 text-[#F72585]" />,
+        status: "Active",
+        tags: ["study", "review", "learn"],
         colSpan: 2,
+        dotColor: "#F72585",
         hasPersistentHover: true,
     },
     {
-        title: "test test test",
-        meta: "test test test",
-        description: "test test test",
-        icon: <CheckCircle className="w-4 h-4 text-[#B5179E]" />,
-        status: "test test test",
-        tags: ["test", "test", "test"],
+        title: "Notes",
+        meta: "Organize",
+        description: "Take detailed notes and organize your study materials",
+        icon: <FileText className="w-4 h-4 text-[#B5179E]" />,
+        status: "Active",
+        tags: ["notes", "organize", "write"],
+        dotColor: "#B5179E",
     },
     {
-        title: "test test test",
-        meta: "test test test",
-        description: "test test test",
-        icon: <Video className="w-4 h-4 text-[#7209B7]" />,
-        tags: ["test", "test", "test"],
+        title: "Mindmaps",
+        meta: "Visualize",
+        description: "Create visual mindmaps to connect concepts",
+        icon: <Brain className="w-4 h-4 text-[#7209B7]" />,
+        tags: ["visual", "connect", "map"],
         colSpan: 2,
+        dotColor: "#7209B7",
     },
     {
-        title: "test test test",
-        meta: "test test test",
-        description: "test test test",
-        icon: <Globe className="w-4 h-4 text-[#560BAD]" />,
-        status: "test test test",
-        tags: ["test", "test", "test"],
+        title: "Quizzes",
+        meta: "Test Yourself",
+        description: "Practice with interactive quizzes and track progress",
+        icon: <ClipboardList className="w-4 h-4 text-[#560BAD]" />,
+        status: "Active",
+        tags: ["quiz", "test", "practice"],
+        dotColor: "#560BAD",
     },
 ];
+
 export function BentoGrid({ items = itemsSample }: BentoGridProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
             {items.map((item, index) => (
-                <div
+                <motion.div
                     key={index}
+                    onClick={item.onClick}
                     className={cn(
-                        "group relative p-5 rounded-lg overflow-hidden",
+                        "group relative p-5 rounded-lg overflow-hidden cursor-pointer",
                         "border border-white/[0.12] bg-[#140a25]/95 shadow-[0_8px_30px_rgb(0,0,0,0.4)]",
-                        "hover:border-white/[0.20]",
+                        "hover:border-white/[0.20] hover:shadow-[0_12px_40px_rgb(0,0,0,0.5)]",
                         "transition-all duration-300",
                         item.colSpan === 2 ? "md:col-span-2" : "col-span-1",
                         { "border-white/[0.15] bg-[#180c2e]/95": item.hasPersistentHover }
                     )}
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.2 }}
                 >
-                    {}
-                    <div
-                        className={cn(
-                            "absolute inset-0 transition-opacity duration-300",
-                            item.hasPersistentHover ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                        )}
-                    >
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(114,9,183,0.10)_1px,transparent_1px)] bg-[length:4px_4px]" />
-                    </div>
-                    <div className="relative flex flex-col space-y-3">
+                    {/* Static dot pattern background - same as welcome card */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[length:4px_4px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    {/* Colored dot pattern on hover */}
+                    <div 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                        style={{
+                            backgroundImage: `radial-gradient(circle at center, ${item.dotColor || '#7209B7'}15 1px, transparent 1px)`,
+                            backgroundSize: '4px 4px'
+                        }}
+                    />
+
+                    <div className="relative flex flex-col space-y-3 z-10">
                         <div className="flex items-center justify-between">
                             <div className="w-8 h-8 rounded-md flex items-center justify-center bg-white/[0.05]">
                                 {item.icon}
@@ -93,7 +110,9 @@ export function BentoGrid({ items = itemsSample }: BentoGridProps) {
                         <div className="space-y-1.5">
                             <h3 className="font-medium text-white/90 tracking-tight text-[15px]">
                                 {item.title}
-                                <span className="ml-2 text-xs text-white/20 font-normal">{item.meta}</span>
+                                {item.meta && (
+                                    <span className="ml-2 text-xs text-white/20 font-normal">{item.meta}</span>
+                                )}
                             </h3>
                             <p className="text-[13px] text-white/30 leading-relaxed">{item.description}</p>
                         </div>
@@ -108,7 +127,7 @@ export function BentoGrid({ items = itemsSample }: BentoGridProps) {
                             </span>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             ))}
         </div>
     );

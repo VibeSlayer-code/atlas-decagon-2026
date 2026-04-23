@@ -120,6 +120,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 Textarea.displayName = "Textarea"
 export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
   const groqKey = (import.meta as any).env?.VITE_GROQ_API_KEY as string | undefined;
+  const openaiKey = (import.meta as any).env?.VITE_OPENAI_API_KEY as string | undefined;
+  const geminiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY as string | undefined;
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -287,42 +289,106 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     const s2 = window.setTimeout(() => setStatus("Thinking"), 1200);
 
     try {
-      if (!groqKey) {
-        throw new Error("Missing VITE_GROQ_API_KEY. Add it to .env and restart the dev server.");
-      }
-      if (model !== "groq") {
-        throw new Error("Only Groq is enabled right now.");
-      }
-
       const system = buildSystemPrompt();
       const contextWindow = await buildContextWindow(prompt, attachments, workspaceMessages);
       setContextPreview(contextWindow.preview);
       await new Promise((r) => window.setTimeout(r, 650));
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          temperature: 0.3,
-          max_tokens: 3500,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: `${prompt}${contextWindow.contextBlock ? `\n\nContext:\n${contextWindow.contextBlock}` : ""}` },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      });
 
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`Groq error (${response.status}): ${text || response.statusText}`);
+      let content: string | undefined;
+
+      if (model === "groq") {
+        if (!groqKey) {
+          throw new Error("Missing VITE_GROQ_API_KEY. Add it to .env and restart the dev server.");
+        }
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            temperature: 0.3,
+            max_tokens: 3500,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: `${prompt}${contextWindow.contextBlock ? `\n\nContext:\n${contextWindow.contextBlock}` : ""}` },
+            ],
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          throw new Error(`Groq error (${response.status}): ${text || response.statusText}`);
+        }
+
+        const data = await response.json();
+        content = data?.choices?.[0]?.message?.content as string | undefined;
+      } else if (model === "chatgpt") {
+        if (!openaiKey) {
+          throw new Error("Missing VITE_OPENAI_API_KEY. Add it to .env and restart the dev server.");
+        }
+
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini", // Cheapest and most efficient GPT-4 model
+            temperature: 0.3,
+            max_tokens: 3500,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: `${prompt}${contextWindow.contextBlock ? `\n\nContext:\n${contextWindow.contextBlock}` : ""}` },
+            ],
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          throw new Error(`OpenAI error (${response.status}): ${text || response.statusText}`);
+        }
+
+        const data = await response.json();
+        content = data?.choices?.[0]?.message?.content as string | undefined;
+      } else if (model === "gemini") {
+        if (!geminiKey) {
+          throw new Error("Missing VITE_GEMINI_API_KEY. Add it to .env and restart the dev server.");
+        }
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `${system}\n\nUser: ${prompt}${contextWindow.contextBlock ? `\n\nContext:\n${contextWindow.contextBlock}` : ""}\n\nRespond with valid JSON only.`
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 3500,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          throw new Error(`Gemini error (${response.status}): ${text || response.statusText}`);
+        }
+
+        const data = await response.json();
+        content = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
       }
 
-      const data = await response.json();
-      const content = data?.choices?.[0]?.message?.content as string | undefined;
       if (!content) throw new Error("Empty response from model.");
 
       const parsed = safeJsonParse(content);
