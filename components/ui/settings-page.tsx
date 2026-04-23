@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Monitor, Cpu, Shield, Download, Trash2, ArrowLeft,
@@ -41,6 +41,84 @@ function SettingToggle({
         }`}
       />
     </button>
+  );
+}
+
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  minWidth = "140px",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  minWidth?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  return (
+    <div ref={dropdownRef} className="relative" style={{ minWidth }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-[#140a25] border border-white/10 text-white/80 text-sm rounded-lg px-3 py-2 outline-none hover:border-[#7209B7]/60 transition-colors cursor-pointer flex items-center justify-between gap-2"
+      >
+        <span>{selectedOption?.label || value}</span>
+        <motion.svg
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="w-4 h-4 text-white/40"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </motion.svg>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 w-full mt-2 bg-[#140a25] border border-white/10 rounded-lg shadow-2xl overflow-hidden"
+          >
+            {options.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer ${
+                  option.value === value
+                    ? "bg-[#7209B7]/20 text-white"
+                    : "text-white/70 hover:bg-white/[0.05] hover:text-white"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -257,11 +335,49 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
 
   const handleClearHistory = () => {
     setShowClearConfirm(false);
-    setToast({ show: true, type: "success", message: "Chat history cleared" });
+    try {
+      // Clear all chat-related data from localStorage
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('chat') || key.includes('conversation') || key.includes('message'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      setToast({ show: true, type: "success", message: "Chat history cleared successfully" });
+    } catch (error) {
+      setToast({ show: true, type: "error", message: "Failed to clear chat history" });
+    }
   };
 
   const handleExport = () => {
-    setToast({ show: true, type: "success", message: "Export started — check your downloads" });
+    try {
+      // Gather all data from localStorage
+      const exportData = {
+        flashcards: JSON.parse(localStorage.getItem("atlas_hackathon_flashcards") || "[]"),
+        notes: JSON.parse(localStorage.getItem("atlas_hackathon_notes") || "[]"),
+        quizzes: JSON.parse(localStorage.getItem("atlas_hackathon_quizzes") || "[]"),
+        mindmaps: JSON.parse(localStorage.getItem("atlas_hackathon_mindmaps") || "[]"),
+        settings: JSON.parse(localStorage.getItem("atlas_pref") || "{}"),
+        exportDate: new Date().toISOString(),
+      };
+
+      // Create a blob and download
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `atlas-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setToast({ show: true, type: "success", message: "Data exported successfully" });
+    } catch (error) {
+      setToast({ show: true, type: "error", message: "Failed to export data" });
+    }
   };
 
   const tabs = [
@@ -272,7 +388,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
   ];
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen h-screen relative bg-[#0c0515] overflow-hidden">
       {/* Toast */}
       <AnimatePresence>
         {toast.show && (
@@ -308,13 +424,13 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
       />
 
       <motion.div
-        className="max-w-5xl mx-auto p-5 md:p-8"
+        className="h-screen flex flex-col"
         variants={stagger}
         initial="hidden"
         animate="show"
       >
         {/* Header */}
-        <motion.div variants={fadeUp} className="flex items-center gap-4 mb-6">
+        <motion.div variants={fadeUp} className="flex items-center gap-4 px-8 pt-8 pb-6 border-b border-white/[0.06]">
           {onBack && (
             <button
               onClick={onBack}
@@ -331,13 +447,13 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
           </div>
         </motion.div>
 
-        {/* Layout: Sidebar + Content */}
+        {/* Layout: Sidebar + Content - Full Height */}
         <motion.div
           variants={fadeUp}
-          className="bg-[#140a25]/90 rounded-xl border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] overflow-hidden flex min-h-[520px]"
+          className="flex-1 flex overflow-hidden"
         >
           {/* Tab Sidebar */}
-          <div className="w-48 md:w-56 bg-white/[0.01] border-r border-white/[0.04] p-4 flex flex-col gap-1">
+          <div className="w-56 bg-white/[0.02] border-r border-white/[0.06] p-4 flex flex-col gap-1">
             {tabs.map((tab) => (
               <TabButton
                 key={tab.id}
@@ -350,7 +466,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 md:p-10">
+          <div className="flex-1 overflow-y-auto p-8 md:p-12">
             {/* ── GENERAL ── */}
             {activeTab === "general" && (
               <motion.div
@@ -358,19 +474,19 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="space-y-6"
+                className="space-y-6 max-w-3xl"
               >
                 <SectionTitle title="Appearance" />
                 <SettingRow title="Theme" desc="Customize the look of your workspace.">
-                  <select
+                  <CustomDropdown
                     value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="bg-[#140a25] border border-white/10 text-white/80 text-sm rounded-lg px-3 py-2 outline-none focus:border-[#7209B7] transition-colors appearance-none cursor-pointer"
-                  >
-                    <option value="system">System Default</option>
-                    <option value="dark">Dark Mode</option>
-                    <option value="light">Light Mode</option>
-                  </select>
+                    onChange={setTheme}
+                    options={[
+                      { value: "system", label: "System Default" },
+                      { value: "dark", label: "Dark Mode" },
+                      { value: "light", label: "Light Mode" },
+                    ]}
+                  />
                 </SettingRow>
 
                 <div className="border-t border-white/[0.04]" />
@@ -408,22 +524,23 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="space-y-6"
+                className="space-y-6 max-w-3xl"
               >
                 <SectionTitle title="Model Preferences" />
                 <SettingRow
                   title="Default Model"
                   desc="Select the primary AI model for new chats."
                 >
-                  <select
+                  <CustomDropdown
                     value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="bg-[#140a25] border border-white/10 text-white/80 text-sm rounded-lg px-3 py-2 outline-none focus:border-[#7209B7] transition-colors appearance-none cursor-pointer min-w-[140px]"
-                  >
-                    <option value="groq">Groq (Recommended)</option>
-                    <option value="gemini">Gemini Pro</option>
-                    <option value="chatgpt">ChatGPT</option>
-                  </select>
+                    onChange={setModel}
+                    options={[
+                      { value: "groq", label: "Groq (Recommended)" },
+                      { value: "gemini", label: "Gemini Pro" },
+                      { value: "chatgpt", label: "ChatGPT" },
+                    ]}
+                    minWidth="160px"
+                  />
                 </SettingRow>
 
                 <SettingRow
@@ -443,18 +560,17 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                   title="Learning Style"
                   desc="Choose how Atlas tailors explanations for you."
                 >
-                  <select
+                  <CustomDropdown
                     value={settings.learningStyle}
-                    onChange={(e) =>
-                      settings.setLearningStyle?.(e.target.value)
-                    }
-                    className="bg-[#140a25] border border-white/10 text-white/80 text-sm rounded-lg px-3 py-2 outline-none focus:border-[#7209B7] transition-colors appearance-none cursor-pointer min-w-[130px]"
-                  >
-                    <option value="visual">Visual</option>
-                    <option value="textual">Textual</option>
-                    <option value="interactive">Interactive</option>
-                    <option value="auditory">Auditory</option>
-                  </select>
+                    onChange={(value) => settings.setLearningStyle?.(value)}
+                    options={[
+                      { value: "visual", label: "Visual" },
+                      { value: "textual", label: "Textual" },
+                      { value: "interactive", label: "Interactive" },
+                      { value: "auditory", label: "Auditory" },
+                    ]}
+                    minWidth="150px"
+                  />
                 </SettingRow>
 
                 <SettingRow
@@ -493,7 +609,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="space-y-6"
+                className="space-y-6 max-w-3xl"
               >
                 <SectionTitle title="Change Password" />
                 <p className="text-white/30 text-[12px] -mt-4">
@@ -639,7 +755,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.25 }}
-                className="space-y-6"
+                className="space-y-6 max-w-3xl"
               >
                 <SectionTitle title="Export & History" />
 

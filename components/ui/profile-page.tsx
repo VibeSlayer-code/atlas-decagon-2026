@@ -6,7 +6,6 @@ import {
   Check, AlertCircle, Loader2, ArrowLeft, Trash2, X
 } from "lucide-react";
 import { useUser } from "@/lib/user-context";
-import { supabase } from "@/lib/supabase";
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -113,40 +112,23 @@ export default function ProfilePage({ onBack }: { onBack?: () => void }) {
 
     setAvatarUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `avatars/${user.id}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
-        // If storage bucket doesn't exist, use a data URL fallback
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-          const dataUrl = evt.target?.result as string;
-          setAvatarUrl(dataUrl);
-          setDirty(true);
-          setAvatarUploading(false);
-        };
-        reader.readAsDataURL(file);
-        return;
-      }
-
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      setAvatarUrl(urlData.publicUrl);
-      setDirty(true);
-    } catch {
-      // Fallback: read file as data URL
+      // Read file as data URL for local storage
       const reader = new FileReader();
-      reader.onload = async (evt) => {
+      reader.onload = (evt) => {
         const dataUrl = evt.target?.result as string;
         setAvatarUrl(dataUrl);
         setDirty(true);
+        setAvatarUploading(false);
+      };
+      reader.onerror = () => {
+        setToast({ show: true, type: "error", message: "Failed to read image file" });
+        setAvatarUploading(false);
       };
       reader.readAsDataURL(file);
+    } catch (error) {
+      setToast({ show: true, type: "error", message: "Failed to upload avatar" });
+      setAvatarUploading(false);
     }
-    setAvatarUploading(false);
   };
 
   const handleSignOut = async () => {

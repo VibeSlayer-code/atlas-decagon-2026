@@ -30,6 +30,8 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const STORAGE_KEY = "atlas_user_profile_local";
+
 function extractUser(supabaseUser: any, profileRow?: any): User {
   return {
     id: supabaseUser.id,
@@ -75,7 +77,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const loadUser = useCallback(async (supabaseUser: any) => {
     const profile = await fetchProfile(supabaseUser.id);
-    setUser(extractUser(supabaseUser, profile));
+    const dbUser = extractUser(supabaseUser, profile);
+    
+    // Check if we have local overrides
+    try {
+      const localData = localStorage.getItem(STORAGE_KEY);
+      if (localData) {
+        const localOverrides = JSON.parse(localData);
+        // Merge: DB data as base, local overrides for fullName and avatarUrl
+        setUser({
+          ...dbUser,
+          fullName: localOverrides.fullName || dbUser.fullName,
+          avatarUrl: localOverrides.avatarUrl || dbUser.avatarUrl,
+          bio: localOverrides.bio || dbUser.bio,
+          phone: localOverrides.phone || dbUser.phone,
+        });
+      } else {
+        setUser(dbUser);
+      }
+    } catch {
+      setUser(dbUser);
+    }
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -112,69 +134,59 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     async (data: UpdateProfileData): Promise<{ success: boolean; error?: string }> => {
       if (!user) return { success: false, error: "Not authenticated" };
       setUpdating(true);
+      
       try {
-        // 1. Update Supabase auth user_metadata (always works)
-        const metadata: Record<string, string> = {};
-        if (data.fullName !== undefined) metadata.full_name = data.fullName;
-        if (data.avatarUrl !== undefined) metadata.avatar_url = data.avatarUrl;
-        if (data.bio !== undefined) metadata.bio = data.bio;
-        if (data.phone !== undefined) metadata.phone = data.phone;
-
-        const { error: authError } = await supabase.auth.updateUser({ data: metadata });
-        if (authError) {
-          setUpdating(false);
-          return { success: false, error: authError.message };
-        }
-
-        // 2. Upsert into profiles table (if it exists)
-        try {
-          await supabase.from("profiles").upsert(
-            {
-              id: user.id,
-              full_name: data.fullName ?? user.fullName,
-              avatar_url: data.avatarUrl ?? user.avatarUrl,
-              bio: data.bio ?? user.bio,
-              phone: data.phone ?? user.phone,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" },
-          );
-        } catch {
-          // profiles table may not exist yet — that's okay, auth metadata is the fallback
-        }
-
-        await refreshUser();
+        // Save local overrides to localStorage (fullName, avatarUrl, bio, phone)
+        const localOverrides = {
+          fullName: data.fullName !== undefined ? data.fullName : user.fullName,
+          avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : user.avatarUrl,
+          bio: data.bio !== undefined ? data.bio : user.bio,
+          phone: data.phone !== undefined ? data.phone : user.phone,
+        };
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(localOverrides));
+        
+        // Update local state immediately
+        setUser({
+          ...user,
+          ...data,
+        });
+        
         setUpdating(false);
         return { success: true };
       } catch (err: any) {
         setUpdating(false);
-        return { success: false, error: err.message || "An unexpected error occurred" };
+        return { success: false, error: err.message || "Failed to update profile" };
       }
     },
-    [user, refreshUser],
+    [user],
   );
 
   const deleteAccount = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "Not authenticated" };
     try {
-      // 1. Delete profile row if table exists
+      // Clear local overrides
+      localStorage.removeItem(STORAGE_KEY);
+      
+      // Clear all app data
+      localStorage.removeItem("atlas_hackathon_flashcards");
+      localStorage.removeItem("atlas_hackathon_notes");
+      localStorage.removeItem("atlas_hackathon_quizzes");
+      localStorage.removeItem("atlas_hackathon_mindmaps");
+      localStorage.removeItem("atlas_pref");
+      
+      // Try to delete from database
       try {
         await supabase.from("profiles").delete().eq("id", user.id);
       } catch {
         // table may not exist
       }
 
-      // 2. Call the edge function / RPC to delete the auth user
-      // Note: Supabase doesn't allow users to delete themselves via client SDK.
-      // We call a database function that uses service_role to delete.
-      const { error: rpcError } = await supabase.rpc("delete_user");
-
-      if (rpcError) {
-        // Fallback: just sign out if the RPC doesn't exist yet
-        console.warn("delete_user RPC not found, signing out instead:", rpcError.message);
-        await supabase.auth.signOut();
-        setUser(null);
-        return { success: true };
+      // Try to call delete RPC
+      try {
+        await supabase.rpc("delete_user");
+      } catch {
+        // RPC may not exist, just sign out
       }
 
       await supabase.auth.signOut();
@@ -186,6 +198,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const signOut = useCallback(async () => {
+    // Clear local overrides on sign out
+    localStorage.removeItem(STORAGE_KEY);
     await supabase.auth.signOut();
     setUser(null);
   }, []);
