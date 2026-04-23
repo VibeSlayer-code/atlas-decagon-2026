@@ -20,10 +20,12 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import * as React from "react"
 import { useSettings } from "@/lib/settings-context";
+
 interface UseAutoResizeTextareaProps {
   minHeight: number;
   maxHeight?: number;
 }
+
 function useAutoResizeTextarea({
   minHeight,
   maxHeight,
@@ -62,17 +64,20 @@ function useAutoResizeTextarea({
   }, [adjustHeight]);
   return { textareaRef, adjustHeight };
 }
+
 interface CommandSuggestion {
   icon: React.ReactNode;
   label: string;
   description: string;
   prefix: string;
 }
+
 interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   containerClassName?: string;
   showRing?: boolean;
 }
+
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, containerClassName, showRing = true, ...props }, ref) => {
     const [isFocused, setIsFocused] = React.useState(false);
@@ -118,6 +123,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   }
 )
 Textarea.displayName = "Textarea"
+
 export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
   const groqKey = (import.meta as any).env?.VITE_GROQ_API_KEY as string | undefined;
   const openaiKey = (import.meta as any).env?.VITE_OPENAI_API_KEY as string | undefined;
@@ -182,6 +188,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     "Summarize this page into a study plan",
   ];
   const [promptIndex, setPromptIndex] = useState(0);
+
   useEffect(() => {
     if (value.startsWith('/') && !value.includes(' ')) {
       setShowCommandPalette(true);
@@ -197,12 +204,14 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
       setShowCommandPalette(false);
     }
   }, [value]);
+
   useEffect(() => {
     const t = window.setInterval(() => {
       setPromptIndex((i) => (i + 1) % rotatingPrompts.length);
     }, 3500);
     return () => window.clearInterval(t);
   }, []);
+
   useEffect(() => {
     if (!showModelMenu) return;
     const onDown = (event: MouseEvent) => {
@@ -218,6 +227,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [showModelMenu]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -233,6 +243,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (showCommandPalette) {
       if (e.key === 'ArrowDown') {
@@ -263,6 +274,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
       }
     }
   };
+
   const handleSendMessage = () => {
     const prompt = value.trim();
     if (!prompt) return;
@@ -284,7 +296,6 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     const assistantId = crypto.randomUUID();
     setWorkspaceMessages((prev) => [...prev, { id: assistantId, role: "assistant", text: "" }]);
 
-    
     const s1 = window.setTimeout(() => setStatus(toolStatus(tool)), 450);
     const s2 = window.setTimeout(() => setStatus("Thinking"), 1200);
 
@@ -338,7 +349,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
             Authorization: `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini", 
+            model: "gpt-4o-mini",
             temperature: 0.3,
             max_tokens: 3500,
             messages: [
@@ -417,8 +428,6 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
       setWorkspaceMessages((prev) =>
         prev.map((m) => (m.id === messageId ? { ...m, text: next } : m))
       );
-      
-      
       await new Promise((r) => window.setTimeout(r, 14));
     }
     setIsTyping(false);
@@ -432,24 +441,29 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     setWorkspaceMessages((prev) => [...prev, userMsg]);
     void runStudyBuddy(prompt);
   };
+
   const handleQuickPrompt = (prompt: string) => {
     if (busy) return;
     const userMsg: StudyBuddyMessage = { id: crypto.randomUUID(), role: "user", text: prompt };
     setWorkspaceMessages((prev) => [...prev, userMsg]);
     void runStudyBuddy(prompt);
   };
+
   const handleFilesSelected = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setAttachments((prev) => [...prev, ...Array.from(files)]);
   };
+
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
+
   const selectCommandSuggestion = (index: number) => {
     const selectedCommand = commandSuggestions[index];
     setValue(selectedCommand.prefix + ' ');
     setShowCommandPalette(false);
   };
+
   return (
     <>
       <div
@@ -497,50 +511,73 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
                   />
                 </motion.div>
               </div>
+
               <motion.div
-                className="w-full relative rounded-[28px] bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] shadow-[0_0_40px_rgba(0,0,0,0.3)] hover:border-white/[0.12] transition-colors duration-300"
+                className="w-full relative z-20 rounded-[28px] bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] shadow-[0_0_40px_rgba(0,0,0,0.3)] hover:border-white/[0.12] transition-colors duration-300"
                 initial={{ scale: 0.98, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.4 }}
               >
+                {/* --- REDESIGNED COMMAND PALETTE (Sleek Glassmorphism, Opaque Background) --- */}
                 <AnimatePresence>
                   {showCommandPalette && (
                     <motion.div
                       ref={commandPaletteRef}
-                      className="absolute left-4 right-4 bottom-full mb-2 backdrop-blur-xl bg-black/90 rounded-lg z-50 shadow-lg border border-white/10 overflow-hidden"
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      transition={{ duration: 0.15 }}
+                      className="absolute left-0 right-0 bottom-[calc(100%+16px)] backdrop-blur-xl bg-[#0a0a0f]/95 rounded-[28px] z-[60] shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/[0.08] overflow-hidden p-2 flex flex-col gap-0.5"
+                      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     >
-                      <div className="py-1 bg-black/95">
-                        {commandSuggestions.map((suggestion, index) => (
+                      {commandSuggestions.map((suggestion, index) => {
+                        const isActive = activeSuggestion === index;
+                        return (
                           <motion.div
                             key={suggestion.prefix}
                             className={cn(
-                              "flex items-center gap-2 px-3 py-2 text-xs transition-colors cursor-pointer",
-                              activeSuggestion === index
-                                ? "bg-white/10 text-white"
-                                : "text-white/70 hover:bg-white/5"
+                              "flex items-center justify-between px-4 py-3 rounded-[20px] cursor-pointer transition-all duration-200 group",
+                              isActive
+                                ? "bg-white/[0.08]"
+                                : "hover:bg-white/[0.04]"
                             )}
+                            onMouseEnter={() => setActiveSuggestion(index)}
                             onClick={() => selectCommandSuggestion(index)}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: index * 0.03 }}
                           >
-                            <div className="w-5 h-5 flex items-center justify-center text-white/60">
-                              {suggestion.icon}
+                            <div className="flex items-center gap-3.5">
+                              <div className={cn(
+                                "flex items-center justify-center transition-colors",
+                                isActive ? "text-white" : "text-white/40 group-hover:text-white/60"
+                              )}>
+                                {suggestion.icon}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className={cn(
+                                  "font-medium text-sm transition-colors",
+                                  isActive ? "text-white" : "text-white/80 group-hover:text-white"
+                                )}>
+                                  {suggestion.label}
+                                </span>
+                                <span className="text-[11px] text-white/40">
+                                  {suggestion.description}
+                                </span>
+                              </div>
                             </div>
-                            <div className="font-medium text-white/90">{suggestion.label}</div>
-                            <div className="text-white/40 text-[10px] ml-1 bg-white/[0.05] px-1.5 py-0.5 rounded-sm">
+                            <div className={cn(
+                              "text-[10px] font-medium tracking-wide px-3 py-1.5 rounded-xl transition-colors",
+                              isActive
+                                ? "bg-white/[0.1] text-white/90"
+                                : "bg-white/[0.05] text-white/40 group-hover:text-white/60"
+                            )}>
                               {suggestion.prefix}
                             </div>
                           </motion.div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </motion.div>
                   )}
                 </AnimatePresence>
+                {/* ---------------------------------- */}
+
                 <div className="p-4">
                   <div className="relative">
                     <Textarea
@@ -660,7 +697,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
                     {showModelMenu && (
                       <motion.div
                         ref={modelMenuRef}
-                        className="absolute left-4 bottom-[72px] w-56 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl overflow-hidden z-50"
+                        className="absolute left-4 bottom-[72px] w-56 rounded-xl border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl overflow-hidden z-[60]"
                         initial={{ opacity: 0, y: 6, filter: "blur(6px)" }}
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                         exit={{ opacity: 0, y: 6, filter: "blur(6px)" }}
@@ -766,6 +803,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     </>
   );
 }
+
 function TypingDots() {
   return (
     <div className="flex items-center ml-1">
@@ -792,6 +830,7 @@ function TypingDots() {
     </div>
   );
 }
+
 const rippleKeyframes = `
 @keyframes ripple {
   0% { transform: scale(0.5); opacity: 0.6; }
@@ -866,7 +905,7 @@ Only when explicitly asked to create study materials:
 
 For notes/summary/tasks/plan/mindmap: content = { "markdown": "string with \\n for newlines" }
 For flashcards: content = { "cards":[{ "front": "string", "back": "string" }] }
-For quiz: content = { "questions": [{ "q": "string", "options": ["A","B","C","D"], "answer": "A", "explanation": "string" }] }
+For quiz: content = { "questions":[{ "q": "string", "options":["A","B","C","D"], "answer": "A", "explanation": "string" }] }
 
 DO NOT USE EMOJIS. Use plain text only.
 
@@ -916,7 +955,6 @@ function toArtifact(
     return { kind, title, content: { markdown: content.markdown } };
   }
 
-  
   if (typeof parsed?.assistantText === "string") {
     return { kind: inferredKind, title: defaultTitle(inferredKind, prompt), content: { markdown: parsed.assistantText } };
   }
@@ -938,11 +976,11 @@ async function buildContextWindow(prompt: string, attachments: File[], messages:
     console.log(`Reading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
     const text = await readFileAsText(file);
     console.log(`Extracted text length: ${text.length}`);
-    if (text && !text.startsWith('[')) { 
+    if (text && !text.startsWith('[')) {
       fileSnippets.push(`File: ${file.name}\n${text.slice(0, 3000)}`);
     } else if (text) {
       console.warn(`Failed to read file: ${text}`);
-      fileSnippets.push(text); 
+      fileSnippets.push(text);
     }
   }
 
@@ -963,14 +1001,11 @@ async function buildContextWindow(prompt: string, attachments: File[], messages:
 
 async function readFileAsText(file: File) {
   try {
-    
     if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
       try {
         console.log(`Starting PDF extraction for: ${file.name}`);
-        
         const pdfjsLib = await import('pdfjs-dist');
 
-        
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
         const arrayBuffer = await file.arrayBuffer();
@@ -983,7 +1018,7 @@ async function readFileAsText(file: File) {
         console.log(`PDF loaded. Total pages: ${pdf.numPages}`);
 
         let fullText = '';
-        const maxPages = Math.min(pdf.numPages, 15); 
+        const maxPages = Math.min(pdf.numPages, 15);
 
         for (let i = 1; i <= maxPages; i++) {
           const page = await pdf.getPage(i);
@@ -994,9 +1029,8 @@ async function readFileAsText(file: File) {
 
         console.log(`Extracted ${fullText.length} characters from PDF`);
 
-        
         const cleaned = fullText.replace(/\s+/g, " ").trim();
-        const result = cleaned.slice(0, 12000); 
+        const result = cleaned.slice(0, 12000);
         console.log(`Returning ${result.length} characters`);
         return result;
       } catch (pdfError) {
@@ -1005,15 +1039,13 @@ async function readFileAsText(file: File) {
       }
     }
 
-    
     if (file.type.startsWith("image/")) {
       return `[Image file: ${file.name} - Image analysis not yet supported. Please describe the image content in your message.]`;
     }
 
-    
     const raw = await file.text();
     const cleaned = raw.replace(/\s+/g, " ").trim();
-    return cleaned.slice(0, 12000); 
+    return cleaned.slice(0, 12000);
   } catch (err) {
     console.error("Error reading file:", err);
     return `[Unable to read file: ${file.name}. Error: ${err instanceof Error ? err.message : 'Unknown error'}]`;
