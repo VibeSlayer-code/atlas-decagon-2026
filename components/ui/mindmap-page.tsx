@@ -38,8 +38,9 @@ type Mindmap = {
     id: string;
     title: string;
     content: {
-        nodes: CanvasNode[];
-        connections: CanvasConnection[];
+        markdown?: string;
+        nodes?: CanvasNode[];
+        connections?: CanvasConnection[];
     };
     created_at: string;
 };
@@ -52,6 +53,82 @@ interface MindmapPageProps {
 
 const LOCAL_STORAGE_KEY = "atlas_hackathon_mindmaps";
 
+const parseMarkdownToNodes = (markdown: string): { nodes: CanvasNode[], connections: CanvasConnection[] } => {
+    const nodes: CanvasNode[] = [];
+    const connections: CanvasConnection[] = [];
+    const lines = markdown.split('\n');
+    
+    const titleMatch = markdown.match(/^#\s+(.+)$/m);
+    const rootTitle = titleMatch ? titleMatch[1].trim() : 'Central Topic';
+    
+    const rootNode: CanvasNode = {
+        id: 'root',
+        title: rootTitle,
+        description: '',
+        x: 400,
+        y: 300,
+        width: NODE_WIDTH,
+        height: 100
+    };
+    nodes.push(rootNode);
+    
+    const stack: { node: CanvasNode; indent: number }[] = [{ node: rootNode, indent: -1 }];
+    let nodeCounter = 0;
+    
+    lines.forEach(line => {
+        if (line.trim() === '' || line.startsWith('#')) return;
+        
+        const match = line.match(/^(\s*)[-*]\s+(.+)$/);
+        if (match) {
+            const indent = match[1].length;
+            let rawText = match[2].trim();
+            
+            let title = rawText.replace(/\*\*/g, '').trim();
+            let description = "";
+            
+            const splitMatch = rawText.match(/^(.*?)(?:[:\-]|\s-\s)(.*)$/);
+            if (splitMatch && splitMatch[1].length < 60) {
+                title = splitMatch[1].replace(/\*\*/g, '').trim();
+                description = splitMatch[2].replace(/\*\*/g, '').trim();
+            }
+            
+            while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {
+                stack.pop();
+            }
+            
+            const parent = stack[stack.length - 1].node;
+            const childrenCount = connections.filter(c => c.fromId === parent.id).length;
+            
+            const ySpacing = 140;
+            const xSpacing = 340;
+            let multiplier = 0;
+            if (childrenCount > 0) {
+                multiplier = Math.ceil(childrenCount / 2) * (childrenCount % 2 === 0 ? 1 : -1);
+            }
+            
+            const newNode: CanvasNode = {
+                id: `node-${nodeCounter++}`,
+                title: title,
+                description: description,
+                x: parent.x + xSpacing,
+                y: parent.y + (multiplier * ySpacing),
+                width: NODE_WIDTH,
+                height: 100
+            };
+            
+            nodes.push(newNode);
+            connections.push({
+                id: `conn-${parent.id}-${newNode.id}`,
+                fromId: parent.id,
+                toId: newNode.id
+            });
+            
+            stack.push({ node: newNode, indent });
+        }
+    });
+    
+    return { nodes, connections };
+};
 
 const getLocalMindmaps = (): Mindmap[] => {
     try {
@@ -133,8 +210,16 @@ export function MindmapPage({ onNavigateToChat }: MindmapPageProps) {
     const openEditor = (mindmap: Mindmap) => {
         setActiveMindmapId(mindmap.id);
         setEditTitle(mindmap.title);
-        setCanvasNodes(mindmap.content.nodes || []);
-        setConnections(mindmap.content.connections || []);
+        
+        if (mindmap.content.markdown) {
+            const parsedNodes = parseMarkdownToNodes(mindmap.content.markdown);
+            setCanvasNodes(parsedNodes.nodes);
+            setConnections(parsedNodes.connections);
+        } else {
+            setCanvasNodes(mindmap.content.nodes || []);
+            setConnections(mindmap.content.connections || []);
+        }
+        
         setSelectedNodeId(null);
         setTransform({ x: 0, y: 0, scale: 1 });
         setView("editor");
@@ -431,7 +516,10 @@ export function MindmapPage({ onNavigateToChat }: MindmapPageProps) {
                                         </h3>
 
                                         <div className="mt-auto flex items-center justify-between text-sm">
-                                            <span className="text-white/40">{mindmap.content.nodes?.length || 0} Nodes</span>
+                                            <span className="text-white/40">
+                                                {mindmap.content.nodes?.length || (mindmap.content.markdown ? 'AI Generated' : 0)} 
+                                                {mindmap.content.nodes ? ' Nodes' : ''}
+                                            </span>
                                             <span className="text-xs font-medium text-white/30 bg-white/[0.05] px-2.5 py-1 rounded-md">
                                                 {new Date(mindmap.created_at).toLocaleDateString()}
                                             </span>
