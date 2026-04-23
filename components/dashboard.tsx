@@ -74,6 +74,9 @@ function DashboardInner() {
     totalCards: 0,
   })
 
+  const [recentNotes, setRecentNotes] = useState<any[]>([])
+  const [weeklyActivity, setWeeklyActivity] = useState<number[]>([0, 0, 0, 0, 0, 0, 0])
+
   useEffect(() => {
     const loadStats = () => {
       try {
@@ -92,6 +95,28 @@ function DashboardInner() {
           mindmaps: mindmaps.length,
           totalCards,
         })
+
+        // Get recent notes (last 3)
+        const sortedNotes = [...notes].sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        setRecentNotes(sortedNotes.slice(0, 3))
+
+        // Calculate weekly activity
+        const allItems = [...flashcards, ...notes, ...quizzes, ...mindmaps]
+        const now = new Date()
+        const activity = [0, 0, 0, 0, 0, 0, 0]
+        
+        allItems.forEach((item: any) => {
+          if (item.created_at) {
+            const itemDate = new Date(item.created_at)
+            const daysDiff = Math.floor((now.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24))
+            if (daysDiff >= 0 && daysDiff < 7) {
+              activity[6 - daysDiff]++
+            }
+          }
+        })
+        setWeeklyActivity(activity)
       } catch (e) {
         console.error("Failed to load stats:", e)
       }
@@ -109,8 +134,6 @@ function DashboardInner() {
       meta: "Study Smart",
       description: "Create and review flashcards with spaced repetition",
       icon: <Zap className="w-4 h-4 text-[#F72585]" />,
-      status: "Active",
-      tags: ["study", "review", "learn"],
       onClick: () => setActiveTab("flashcards"),
       dotColor: "#F72585",
     },
@@ -119,8 +142,6 @@ function DashboardInner() {
       meta: "Organize",
       description: "Take detailed notes and organize your study materials",
       icon: <FileText className="w-4 h-4 text-[#B5179E]" />,
-      status: "Active",
-      tags: ["notes", "organize", "write"],
       onClick: () => setActiveTab("notes"),
       dotColor: "#B5179E",
     },
@@ -129,8 +150,6 @@ function DashboardInner() {
       meta: "Visualize",
       description: "Create visual mindmaps to connect concepts",
       icon: <GraduationCap className="w-4 h-4 text-[#7209B7]" />,
-      status: "Active",
-      tags: ["visual", "connect", "map"],
       onClick: () => setActiveTab("mindmaps"),
       dotColor: "#7209B7",
     },
@@ -139,8 +158,6 @@ function DashboardInner() {
       meta: "Test Yourself",
       description: "Practice with interactive quizzes and track progress",
       icon: <BookOpen className="w-4 h-4 text-[#560BAD]" />,
-      status: "Active",
-      tags: ["quiz", "test", "practice"],
       onClick: () => setActiveTab("quizzes"),
       dotColor: "#560BAD",
     },
@@ -360,10 +377,10 @@ function DashboardInner() {
                         <div className="text-xs text-white/30 mt-1">{stats.totalCards} total cards</div>
                       </div>
 
-                      <div className="bg-gradient-to-br from-[#F72585]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                      <div className="bg-gradient-to-br from-[#B5179E]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#F72585]/20 flex items-center justify-center">
-                            <FileText className="w-4 h-4 text-[#F72585]" />
+                          <div className="w-8 h-8 rounded-lg bg-[#B5179E]/20 flex items-center justify-center">
+                            <FileText className="w-4 h-4 text-[#B5179E]" />
                           </div>
                         </div>
                         <div className="text-3xl font-bold text-white/95 mb-1">{stats.notes}</div>
@@ -371,10 +388,10 @@ function DashboardInner() {
                         <div className="text-xs text-white/30 mt-1">Study materials</div>
                       </div>
 
-                      <div className="bg-gradient-to-br from-[#4CC9F0]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                      <div className="bg-gradient-to-br from-[#F72585]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#4CC9F0]/20 flex items-center justify-center">
-                            <BookOpen className="w-4 h-4 text-[#4CC9F0]" />
+                          <div className="w-8 h-8 rounded-lg bg-[#F72585]/20 flex items-center justify-center">
+                            <BookOpen className="w-4 h-4 text-[#F72585]" />
                           </div>
                         </div>
                         <div className="text-3xl font-bold text-white/95 mb-1">{stats.quizzes}</div>
@@ -382,10 +399,10 @@ function DashboardInner() {
                         <div className="text-xs text-white/30 mt-1">Practice tests</div>
                       </div>
 
-                      <div className="bg-gradient-to-br from-[#B5179E]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
+                      <div className="bg-gradient-to-br from-[#560BAD]/10 to-transparent rounded-xl p-4 border border-white/[0.05]">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#B5179E]/20 flex items-center justify-center">
-                            <MessageCircle className="w-4 h-4 text-[#B5179E]" />
+                          <div className="w-8 h-8 rounded-lg bg-[#560BAD]/20 flex items-center justify-center">
+                            <MessageCircle className="w-4 h-4 text-[#560BAD]" />
                           </div>
                         </div>
                         <div className="text-3xl font-bold text-white/95 mb-1">{stats.mindmaps}</div>
@@ -395,9 +412,168 @@ function DashboardInner() {
                     </div>
                   </div>
                 </motion.div>
+
+                {/* Weekly Activity Graph */}
+                <motion.div
+                  variants={fadeUp}
+                  className="bg-[#140a25]/90 rounded-lg border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden"
+                >
+                  <div className="relative p-6">
+                    <h2 className="text-lg font-semibold text-white/90 mb-6">Weekly Activity</h2>
+                    <div className="flex items-end justify-between gap-3 h-32">
+                      {weeklyActivity.map((count, idx) => {
+                        const maxCount = Math.max(...weeklyActivity, 1)
+                        const height = (count / maxCount) * 100
+                        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                        const today = new Date().getDay()
+                        const dayIndex = (today - 6 + idx + 7) % 7
+                        
+                        return (
+                          <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                            <div className="w-full bg-white/[0.03] rounded-lg overflow-hidden relative" style={{ height: '100px' }}>
+                              <motion.div
+                                initial={{ height: 0 }}
+                                animate={{ height: `${height}%` }}
+                                transition={{ duration: 0.6, delay: idx * 0.1 }}
+                                className="absolute bottom-0 w-full bg-gradient-to-t from-[#7209B7] via-[#B5179E] to-[#F72585] rounded-t-lg"
+                              />
+                            </div>
+                            <div className="text-[10px] text-white/40 font-medium">{days[dayIndex]}</div>
+                            <div className="text-xs text-white/60 font-semibold">{count}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Recent Notes */}
+                <motion.div
+                  variants={fadeUp}
+                  className="bg-[#140a25]/90 rounded-lg border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden"
+                >
+                  <div className="relative p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-lg font-semibold text-white/90">Recent Notes</h2>
+                      <button
+                        onClick={() => setActiveTab("notes")}
+                        className="text-xs text-[#F72585] hover:text-[#F72585]/80 font-medium transition-colors"
+                      >
+                        View All →
+                      </button>
+                    </div>
+                    
+                    {recentNotes.length > 0 ? (
+                      <div className="space-y-3">
+                        {recentNotes.map((note, idx) => (
+                          <motion.div
+                            key={note.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            onClick={() => setActiveTab("notes")}
+                            className="bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.05] rounded-lg p-4 cursor-pointer transition-all group"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors">
+                                  {note.title}
+                                </h3>
+                                <p className="text-xs text-white/40 mt-1 line-clamp-2">
+                                  {note.content?.markdown?.substring(0, 100) || "No content"}
+                                </p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <div className="w-8 h-8 rounded-lg bg-[#F72585]/10 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-[#F72585]" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-[10px] text-white/30 mt-3">
+                              {new Date(note.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
+                          <FileText className="w-6 h-6 text-white/20" />
+                        </div>
+                        <p className="text-sm text-white/30">No notes yet</p>
+                        <button
+                          onClick={() => setActiveTab("ai")}
+                          className="mt-3 text-xs text-[#F72585] hover:text-[#F72585]/80 font-medium transition-colors"
+                        >
+                          Create your first note with AI →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               </div>
               { }
               <div className="flex flex-col gap-4">
+                {/* Quick Actions */}
+                <motion.div
+                  variants={fadeUp}
+                  className="bg-[#140a25]/90 rounded-lg border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] p-5 relative overflow-hidden"
+                >
+                  <div className="relative">
+                    <h3 className="text-sm font-semibold text-white/90 mb-4">Quick Actions</h3>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setActiveTab("ai")}
+                        className="w-full bg-gradient-to-r from-[#7209B7] to-[#B5179E] hover:from-[#7209B7]/90 hover:to-[#B5179E]/90 text-white text-sm font-medium py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg"
+                      >
+                        <Bot className="w-4 h-4" />
+                        Chat with AI
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("flashcards")}
+                        className="w-full bg-white/[0.04] hover:bg-white/[0.08] text-white/80 text-sm font-medium py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 border border-white/[0.06]"
+                      >
+                        <Zap className="w-4 h-4" />
+                        New Flashcards
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("notes")}
+                        className="w-full bg-white/[0.04] hover:bg-white/[0.08] text-white/80 text-sm font-medium py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 border border-white/[0.06]"
+                      >
+                        <FileText className="w-4 h-4" />
+                        New Note
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Study Streak */}
+                <motion.div
+                  variants={fadeUp}
+                  className="bg-[#140a25]/90 rounded-lg border border-white/[0.12] shadow-[0_8px_30px_rgb(0,0,0,0.4)] p-5 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#F72585]/20 to-transparent rounded-full blur-2xl" />
+                  <div className="relative">
+                    <h3 className="text-sm font-semibold text-white/90 mb-4">Study Streak</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F72585] to-[#7209B7]">
+                          {weeklyActivity.filter(d => d > 0).length}
+                        </div>
+                        <div className="text-xs text-white/40 mt-1">days this week</div>
+                      </div>
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#7209B7]/20 to-[#F72585]/20 flex items-center justify-center border border-white/[0.08]">
+                        <span className="text-2xl">🔥</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
                 { }
                 <motion.div
                   variants={fadeUp}
