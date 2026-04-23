@@ -4,7 +4,7 @@ interface GlassVideoHeroProps {
   title: string
   description: string
 }
-
+// Intentionally left blank; provide a real URL when this component is used.
 const VIDEO_URL = ""
 export function GlassVideoHero({ badge = "Auth", title, description }: GlassVideoHeroProps) {
   return (

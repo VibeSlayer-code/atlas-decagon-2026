@@ -19,6 +19,7 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 } as any;
 
+/* ── Reusable sub-components ──────────────────────────────── */
 
 function SettingToggle({
   isOn,
@@ -175,6 +176,7 @@ function TabButton({
   );
 }
 
+/* ── Password Strength ──────────────────────────────────── */
 
 function getPasswordStrength(password: string) {
   if (!password) return { strength: 0, label: "", color: "" };
@@ -189,6 +191,7 @@ function getPasswordStrength(password: string) {
   return { strength: 100, label: "Strong", color: "bg-green-500" };
 }
 
+/* ── Confirm Dialog ──────────────────────────────────────── */
 
 function ConfirmDialog({
   isOpen,
@@ -257,6 +260,7 @@ function ConfirmDialog({
   );
 }
 
+/* ── Main Settings Page ─────────────────────────────────── */
 
 interface ToastState {
   show: boolean;
@@ -268,7 +272,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
   const [activeTab, setActiveTab] = useState("general");
   const settings = useSettings();
 
-  
+  // The following states are now handled by useSettings:
   const theme = settings.theme;
   const setTheme = (v: string) => settings.setTheme?.(v);
   const model = settings.activeAgent;
@@ -276,7 +280,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
   const memory = settings.memoryEnabled;
   const setMemory = (v: boolean) => settings.setMemoryEnabled?.(v);
 
-  
+  // Security
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -285,10 +289,10 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
   const [changingPw, setChangingPw] = useState(false);
   const [pwError, setPwError] = useState("");
 
-  
+  // Dialogs
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  
+  // Toast
   const [toast, setToast] = useState<ToastState>({ show: false, type: "success", message: "" });
 
   useEffect(() => {
@@ -332,7 +336,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
   const handleClearHistory = () => {
     setShowClearConfirm(false);
     try {
-      
+      // Clear all chat-related data from localStorage
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -349,7 +353,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
 
   const handleExport = () => {
     try {
-      
+      // Gather all data from localStorage
       const exportData = {
         flashcards: JSON.parse(localStorage.getItem("atlas_hackathon_flashcards") || "[]"),
         notes: JSON.parse(localStorage.getItem("atlas_hackathon_notes") || "[]"),
@@ -359,7 +363,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
         exportDate: new Date().toISOString(),
       };
 
-      
+      // Create a blob and download
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -385,7 +389,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="min-h-screen h-screen relative bg-[#0c0515] overflow-hidden">
-      {}
+      {/* Toast */}
       <AnimatePresence>
         {toast.show && (
           <motion.div
@@ -408,7 +412,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
         )}
       </AnimatePresence>
 
-      {}
+      {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={showClearConfirm}
         title="Clear Chat History"
@@ -425,7 +429,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
         initial="hidden"
         animate="show"
       >
-        {}
+        {/* Header */}
         <motion.div variants={fadeUp} className="flex items-center gap-4 px-8 pt-8 pb-6 border-b border-white/[0.06]">
           {onBack && (
             <button
@@ -443,12 +447,12 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
           </div>
         </motion.div>
 
-        {}
+        {/* Layout: Sidebar + Content - Full Height */}
         <motion.div
           variants={fadeUp}
           className="flex-1 flex overflow-hidden"
         >
-          {}
+          {/* Tab Sidebar */}
           <div className="w-56 bg-white/[0.02] border-r border-white/[0.06] p-4 flex flex-col gap-1">
             {tabs.map((tab) => (
               <TabButton
@@ -461,9 +465,9 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
             ))}
           </div>
 
-          {}
+          {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-8 md:p-12">
-            {}
+            {/* ── GENERAL ── */}
             {activeTab === "general" && (
               <motion.div
                 key="general"
@@ -513,7 +517,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
               </motion.div>
             )}
 
-            {}
+            {/* ── AI MODEL ── */}
             {activeTab === "ai" && (
               <motion.div
                 key="ai"
@@ -598,7 +602,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
               </motion.div>
             )}
 
-            {}
+            {/* ── SECURITY ── */}
             {activeTab === "security" && (
               <motion.div
                 key="security"
@@ -620,7 +624,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                 )}
 
                 <div className="space-y-4 max-w-md">
-                  {}
+                  {/* Current Password */}
                   <div className="flex flex-col gap-2">
                     <label className="text-white/60 text-[13px] font-medium">
                       Current Password
@@ -647,7 +651,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                     </div>
                   </div>
 
-                  {}
+                  {/* New Password */}
                   <div className="flex flex-col gap-2">
                     <label className="text-white/60 text-[13px] font-medium">
                       New Password
@@ -675,7 +679,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                         )}
                       </button>
                     </div>
-                    {}
+                    {/* Strength bar */}
                     <AnimatePresence>
                       {newPassword && (
                         <motion.div
@@ -702,7 +706,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void }) {
                     </AnimatePresence>
                   </div>
 
-                  {}
+                  {/* Confirm Password */}
                   <div className="flex flex-col gap-2">
                     <label className="text-white/60 text-[13px] font-medium">
                       Confirm New Password

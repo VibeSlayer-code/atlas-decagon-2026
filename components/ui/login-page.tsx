@@ -12,7 +12,7 @@ import { GradientMesh } from "@/components/ui/gradient-mesh";
 import atlasLogo from "@/assets/Atlas Minimal Logo.svg";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
-import { supabase } from "@/lib/supabase"; // Ensure this matches your file path
+import { supabase } from "@/lib/supabase"; 
 
 const GoogleIcon = () => (
   <svg
@@ -50,7 +50,7 @@ export default function LoginPage({
   onSignupClick,
   onLoginSuccess,
 }: LoginPageProps) {
-  // --- STATE ---
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +64,7 @@ export default function LoginPage({
     if (onSignupClick) onSignupClick();
   };
 
-  // --- SUPABASE LOGIN LOGIC ---
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -84,7 +84,7 @@ export default function LoginPage({
     }
   };
 
-  // --- GOOGLE OAUTH LOGIC ---
+  
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -137,7 +137,7 @@ export default function LoginPage({
                   transition={{ duration: 0.6, delay: 0.3 }}
                   className="flex flex-col items-start gap-2.5 text-left mb-10"
                 >
-                  {/* FONT FIX: Removed font-display */}
+                  {}
                   <h1 className="text-5xl font-semibold tracking-tight leading-[1.1]">
                     Welcome Back
                   </h1>
@@ -146,7 +146,7 @@ export default function LoginPage({
                   </p>
                 </motion.div>
 
-                {/* ERROR ALERT BOX */}
+                {}
                 {errorMsg && (
                   <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-500 text-sm rounded-md">
                     {errorMsg}

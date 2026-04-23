@@ -79,12 +79,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const profile = await fetchProfile(supabaseUser.id);
     const dbUser = extractUser(supabaseUser, profile);
     
-    
+    // Check if we have local overrides
     try {
       const localData = localStorage.getItem(STORAGE_KEY);
       if (localData) {
         const localOverrides = JSON.parse(localData);
-        
+        // Merge: DB data as base, local overrides for fullName and avatarUrl
         setUser({
           ...dbUser,
           fullName: localOverrides.fullName || dbUser.fullName,
@@ -136,7 +136,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUpdating(true);
       
       try {
-        
+        // Save local overrides to localStorage (fullName, avatarUrl, bio, phone)
         const localOverrides = {
           fullName: data.fullName !== undefined ? data.fullName : user.fullName,
           avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : user.avatarUrl,
@@ -146,7 +146,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         
         localStorage.setItem(STORAGE_KEY, JSON.stringify(localOverrides));
         
-        
+        // Update local state immediately
         setUser({
           ...user,
           ...data,
@@ -165,28 +165,28 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const deleteAccount = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: "Not authenticated" };
     try {
-      
+      // Clear local overrides
       localStorage.removeItem(STORAGE_KEY);
       
-      
+      // Clear all app data
       localStorage.removeItem("atlas_hackathon_flashcards");
       localStorage.removeItem("atlas_hackathon_notes");
       localStorage.removeItem("atlas_hackathon_quizzes");
       localStorage.removeItem("atlas_hackathon_mindmaps");
       localStorage.removeItem("atlas_pref");
       
-      
+      // Try to delete from database
       try {
         await supabase.from("profiles").delete().eq("id", user.id);
       } catch {
-        
+        // table may not exist
       }
 
-      
+      // Try to call delete RPC
       try {
         await supabase.rpc("delete_user");
       } catch {
-        
+        // RPC may not exist, just sign out
       }
 
       await supabase.auth.signOut();
@@ -198,7 +198,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const signOut = useCallback(async () => {
-    
+    // Clear local overrides on sign out
     localStorage.removeItem(STORAGE_KEY);
     await supabase.auth.signOut();
     setUser(null);

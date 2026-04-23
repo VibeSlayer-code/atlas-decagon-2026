@@ -1,0 +1,38 @@
+import { createClient } from "@supabase/supabase-js";
+
+// Use PUBLISHABLE_KEY because that is what you named it in your .env
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    "Supabase variables are missing! URL:",
+    supabaseUrl,
+    "Key:",
+    supabaseAnonKey,
+  );
+}
+
+// Get the current site URL, fallback to production URL
+const getSiteUrl = () => {
+  // Check if we're in production
+  if (window.location.hostname === 'atlasbeta.vercel.app') {
+    return 'https://atlasbeta.vercel.app';
+  }
+  // For local development
+  if (window.location.hostname === 'localhost') {
+    return `http://localhost:${window.location.port}`;
+  }
+  // Fallback to current origin
+  return window.location.origin;
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    redirectTo: getSiteUrl(),
+  }
+});

@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
-
+// --- Utility function ---
 function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-
+// --- NEW: Animated Logo Component (Ping-Pong Animation) ---
 const AtlasAnimatedLogo = ({
   size = 24,
   className = "",
@@ -52,7 +52,7 @@ const AtlasAnimatedLogo = ({
         viewBox="0 0 426 392"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="start" 
+        className="start" // Triggers the Vivus line-drawing animation
       >
         <path
           d="M234.581 142.378L238.296 167.848C238.525 169.415 240.397 170.108 241.591 169.066L255.588 156.846L287.298 129.149C288.912 127.739 287.479 125.121 285.421 125.723L235.999 140.169C235.042 140.449 234.438 141.391 234.581 142.378Z"
@@ -125,7 +125,7 @@ const AtlasAnimatedLogo = ({
     </motion.div>
   );
 };
-
+// --- Helper: Format Markdown ---
 function formatMarkdown(text: string) {
   if (!text) return null;
   let html = text
@@ -179,7 +179,7 @@ function formatMarkdown(text: string) {
   );
 }
 
-
+// --- Helper: Extract JSON array ---
 function extractJsonArray(text: string): string | null {
   const startIdx = text.indexOf("[");
   if (startIdx === -1) return null;

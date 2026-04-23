@@ -284,7 +284,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
     const assistantId = crypto.randomUUID();
     setWorkspaceMessages((prev) => [...prev, { id: assistantId, role: "assistant", text: "" }]);
 
-    
+    // small staged statuses to feel “alive”
     const s1 = window.setTimeout(() => setStatus(toolStatus(tool)), 450);
     const s2 = window.setTimeout(() => setStatus("Thinking"), 1200);
 
@@ -338,7 +338,7 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
             Authorization: `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini", 
+            model: "gpt-4o-mini", // Cheapest and most efficient GPT-4 model
             temperature: 0.3,
             max_tokens: 3500,
             messages: [
@@ -417,8 +417,8 @@ export function AgentChat({ userName = "Vihaan" }: { userName?: string }) {
       setWorkspaceMessages((prev) =>
         prev.map((m) => (m.id === messageId ? { ...m, text: next } : m))
       );
-      
-      
+      // slightly jittery but smooth
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => window.setTimeout(r, 14));
     }
     setIsTyping(false);
@@ -916,7 +916,7 @@ function toArtifact(
     return { kind, title, content: { markdown: content.markdown } };
   }
 
-  
+  // fallback: render whatever we got as markdown so canvas isn't blank
   if (typeof parsed?.assistantText === "string") {
     return { kind: inferredKind, title: defaultTitle(inferredKind, prompt), content: { markdown: parsed.assistantText } };
   }
@@ -938,11 +938,11 @@ async function buildContextWindow(prompt: string, attachments: File[], messages:
     console.log(`Reading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
     const text = await readFileAsText(file);
     console.log(`Extracted text length: ${text.length}`);
-    if (text && !text.startsWith('[')) { 
+    if (text && !text.startsWith('[')) { // Don't include error messages
       fileSnippets.push(`File: ${file.name}\n${text.slice(0, 3000)}`);
     } else if (text) {
       console.warn(`Failed to read file: ${text}`);
-      fileSnippets.push(text); 
+      fileSnippets.push(text); // Include error message
     }
   }
 
@@ -963,14 +963,14 @@ async function buildContextWindow(prompt: string, attachments: File[], messages:
 
 async function readFileAsText(file: File) {
   try {
-    
+    // Handle PDF files
     if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
       try {
         console.log(`Starting PDF extraction for: ${file.name}`);
-        
+        // Dynamic import to avoid bundling issues
         const pdfjsLib = await import('pdfjs-dist');
 
-        
+        // Use local worker file
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
         const arrayBuffer = await file.arrayBuffer();
@@ -983,7 +983,7 @@ async function readFileAsText(file: File) {
         console.log(`PDF loaded. Total pages: ${pdf.numPages}`);
 
         let fullText = '';
-        const maxPages = Math.min(pdf.numPages, 15); 
+        const maxPages = Math.min(pdf.numPages, 15); // Limit to first 15 pages
 
         for (let i = 1; i <= maxPages; i++) {
           const page = await pdf.getPage(i);
@@ -994,9 +994,9 @@ async function readFileAsText(file: File) {
 
         console.log(`Extracted ${fullText.length} characters from PDF`);
 
-        
+        // Clean up whitespace but keep paragraph breaks
         const cleaned = fullText.replace(/\s+/g, " ").trim();
-        const result = cleaned.slice(0, 12000); 
+        const result = cleaned.slice(0, 12000); // Increased limit to 12000 chars
         console.log(`Returning ${result.length} characters`);
         return result;
       } catch (pdfError) {
@@ -1005,15 +1005,15 @@ async function readFileAsText(file: File) {
       }
     }
 
-    
+    // Handle image files
     if (file.type.startsWith("image/")) {
       return `[Image file: ${file.name} - Image analysis not yet supported. Please describe the image content in your message.]`;
     }
 
-    
+    // Handle text-based files
     const raw = await file.text();
     const cleaned = raw.replace(/\s+/g, " ").trim();
-    return cleaned.slice(0, 12000); 
+    return cleaned.slice(0, 12000); // Increased limit
   } catch (err) {
     console.error("Error reading file:", err);
     return `[Unable to read file: ${file.name}. Error: ${err instanceof Error ? err.message : 'Unknown error'}]`;

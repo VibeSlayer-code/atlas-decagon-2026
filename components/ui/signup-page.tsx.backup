@@ -76,7 +76,7 @@ export default function SignupPage({
   const ref = useRef(null);
   const isInView = useInView(ref, { once: false, amount: 0.3 });
 
-  
+  // Auto-hide toast after 8 seconds
   useEffect(() => {
     if (showToast) {
       const timer = setTimeout(() => setShowToast(false), 8000);
@@ -111,7 +111,7 @@ export default function SignupPage({
     if (error) {
       setErrorMsg(error.message);
     } else {
-      
+      // Insert into profiles table if the user was created
       if (data.user) {
         try {
           await supabase.from("profiles").upsert(
@@ -128,7 +128,7 @@ export default function SignupPage({
             { onConflict: "id" },
           );
         } catch {
-          
+          // profiles table may not exist yet — that's okay
         }
       }
       setShowToast(true);
@@ -144,7 +144,7 @@ export default function SignupPage({
       id="signup-section"
       className="grid min-h-svh bg-background lg:grid-cols-2 relative overflow-hidden"
     >
-      {}
+      {/* SUCCESS TOAST (BOTTOM RIGHT) */}
       <AnimatePresence>
         {showToast && (
           <motion.div

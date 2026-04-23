@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-
+// --- Type Definitions ---
 type CanvasNode = {
     id: string;
     title: string;
@@ -52,7 +52,7 @@ interface MindmapPageProps {
 
 const LOCAL_STORAGE_KEY = "atlas_hackathon_mindmaps";
 
-
+// --- Local Storage Helpers ---
 const getLocalMindmaps = (): Mindmap[] => {
     try {
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -65,7 +65,7 @@ const getLocalMindmaps = (): Mindmap[] => {
 const saveLocalMindmaps = (mindmaps: Mindmap[]) => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(mindmaps));
 };
-
+// -----------------------------
 
 const NODE_WIDTH = 280;
 
@@ -73,26 +73,26 @@ export function MindmapPage({ onNavigateToChat }: MindmapPageProps) {
     const [mindmaps, setMindmaps] = useState<Mindmap[]>([]);
     const [view, setView] = useState<ViewState>("list");
 
-    
+    // Editor State
     const [activeMindmapId, setActiveMindmapId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState("");
     const [canvasNodes, setCanvasNodes] = useState<CanvasNode[]>([]);
     const [connections, setConnections] = useState<CanvasConnection[]>([]);
 
-    
+    // Interaction State
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
 
-    
+    // Connection State
     const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-    
+    // Viewport State
     const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-    const [isPanning, setIsPanning] = useState(false); 
+    const [isPanning, setIsPanning] = useState(false); // Used only for CSS classes
 
-    
+    // Completely Synchronous Event Trackers (Fixes lag and dropped inputs)
     const isPanningRef = useRef(false);
     const isDraggingRef = useRef(false);
     const panStartRef = useRef({ x: 0, y: 0 });
@@ -104,7 +104,7 @@ export function MindmapPage({ onNavigateToChat }: MindmapPageProps) {
         setMindmaps(getLocalMindmaps());
     }, []);
 
-    
+    // Global Mouse Up Safety Net - stops drags getting stuck if mouse leaves browser
     const handleCanvasMouseUp = useCallback(() => {
         setDraggedNodeId(null);
         setIsPanning(false);
@@ -233,10 +233,10 @@ export function MindmapPage({ onNavigateToChat }: MindmapPageProps) {
     }, [draggedNodeId, transform.x, transform.y, transform.scale]);
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
-        
-        
+        // Prevent default ONLY on middle-click to stop auto-scroll. 
+        // Preventing default on left-click breaks mousemove completely in Chrome.
         if (e.button === 1) e.preventDefault();
-        if (e.button !== 0 && e.button !== 1) return; 
+        if (e.button !== 0 && e.button !== 1) return; // Only process left/middle click
 
         setSelectedNodeId(null);
         setIsPanning(true);

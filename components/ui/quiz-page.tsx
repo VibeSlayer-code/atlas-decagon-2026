@@ -8,9 +8,7 @@ import {
     ArrowLeft,
     Trash2,
     ClipboardList,
-    Save,
-    Edit,
-    CheckCircle2
+    Save
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -172,9 +170,9 @@ export function QuizPage({ onNavigateToChat }: QuizPageProps) {
         Array.isArray(q.options) && q.options.length > 0
     ) || [];
     const total = validQuestions.length;
-    const answered = validQuestions.filter((q, idx) => typeof selected[idx] === "string").length;
-    const correct = validQuestions.filter((q, idx) =>
-        normalize(selected[idx]) === normalize(q.answer)
+    const answered = validQuestions.filter((_q, idx) => typeof selected[idx] === "string").length;
+    const correct = validQuestions.filter((_q, idx) =>
+        normalize(selected[idx]) === normalize(validQuestions[idx].answer)
     ).length;
 
     return (
@@ -455,7 +453,8 @@ export function QuizPage({ onNavigateToChat }: QuizPageProps) {
                             </div>
 
                             <div className="space-y-4">
-                                {validQuestions.map((q, idx) => {
+                                {validQuestions.map((_q, idx) => {
+                                    const q = validQuestions[idx];
                                     const picked = selected[idx];
                                     const isCorrect = normalize(picked) === normalize(q.answer);
                                     return (

@@ -12,7 +12,7 @@ import {
     Edit
 } from "lucide-react";
 
-
+// --- Type Definitions ---
 type Note = {
     id: string;
     title: string;
@@ -28,7 +28,7 @@ interface NotesPageProps {
 
 const LOCAL_STORAGE_KEY = "atlas_hackathon_notes";
 
-
+// --- Pure Local Storage Helpers ---
 const getLocalNotes = (): Note[] => {
     try {
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -41,8 +41,9 @@ const getLocalNotes = (): Note[] => {
 const saveLocalNotes = (notes: Note[]) => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
 };
+// --------------------------------------------------------
 
-
+// --- Markdown Formatter (with table support) ---
 function formatPowerNotation(input: string) {
     if (!input) return input;
     return input.replace(/([A-Za-z0-9)\]])\^([0-9+\-]+)/g, (_m, base: string, exp: string) => {
@@ -65,8 +66,8 @@ function formatMarkdown(text: string) {
 
     let html = text;
 
-    
-    html = html.replace(/(?:^|\r?\n)([ \t]*\|.*\|[ \t]*(?:\r?\n[ \t]*\|.*\|[ \t]*)+)/g, (_match: string, tableBlock: string) => {
+    // Process tables
+    html = html.replace(/(?:^|\r?\n)([ \t]*\|.*\|[ \t]*(?:\r?\n[ \t]*\|.*\|[ \t]*)+)/g, (match, tableBlock) => {
         const lines = tableBlock.trim().split(/\r?\n/);
         let htmlTable = '<div class="overflow-x-auto my-6 border border-white/10 rounded-xl bg-white/[0.01] shadow-sm"><table class="w-full text-left text-sm text-white/80 m-0"><thead class="bg-white/[0.04] text-white/90 border-b border-white/10">';
         let isHeader = true;
@@ -81,7 +82,7 @@ function formatMarkdown(text: string) {
                 continue;
             }
 
-            const cells = line.split('|').map((c: string) => c.trim());
+            const cells = line.split('|').map(c => c.trim());
             if (cells[0] === '') cells.shift();
             if (cells[cells.length - 1] === '') cells.pop();
 
@@ -119,6 +120,7 @@ function formatMarkdown(text: string) {
 
     return <div className="text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />;
 }
+// ---------------------------------------------------------------
 
 
 export function NotesPage({ onNavigateToChat }: NotesPageProps) {
@@ -127,12 +129,12 @@ export function NotesPage({ onNavigateToChat }: NotesPageProps) {
 
     const [activeNote, setActiveNote] = useState<Note | null>(null);
 
-    
+    // Editor states
     const [editId, setEditId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState("");
     const [editContent, setEditContent] = useState("");
 
-    
+    // Load data instantly on mount
     useEffect(() => {
         setNotes(getLocalNotes());
     }, []);
@@ -173,7 +175,7 @@ export function NotesPage({ onNavigateToChat }: NotesPageProps) {
             newNotesList = [noteData, ...notes];
         }
 
-        
+        // Keep sorted by date
         newNotesList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
         saveLocalNotes(newNotesList);
@@ -202,11 +204,11 @@ export function NotesPage({ onNavigateToChat }: NotesPageProps) {
 
     return (
         <div className="w-full h-full flex flex-col p-8 overflow-y-auto[&::-webkit-scrollbar]:hidden relative z-10 text-white">
-            {}
+            {/* Background ambient glows */}
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-fuchsia-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-            {}
+            {/* HEADER for List View */}
             {view === "list" && (
                 <div className="flex items-end justify-between mb-10 relative z-20">
                     <div>
@@ -226,7 +228,7 @@ export function NotesPage({ onNavigateToChat }: NotesPageProps) {
             )}
 
             <AnimatePresence mode="wait">
-                {}
+                {/* ---- LIST VIEW ---- */}
                 {view === "list" && (
                     <motion.div key="list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full flex-1">
                         {notes.length === 0 ? (

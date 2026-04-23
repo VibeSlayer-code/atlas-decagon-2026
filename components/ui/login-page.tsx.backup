@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GradientMesh } from "@/components/ui/gradient-mesh";
 import atlasLogo from "@/assets/Atlas Minimal Logo.svg";
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useInView } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { motion, useInView } from "framer-motion";
+import { useRef, useState } from "react";
+import { supabase } from "@/lib/supabase"; // Ensure this matches your file path
 
 const GoogleIcon = () => (
   <svg
@@ -41,164 +41,66 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const getPasswordStrength = (password: string) => {
-  if (!password) return { strength: 0, label: "", color: "" };
-  let strength = 0;
-  if (password.length >= 8) strength++;
-  if (password.length >= 12) strength++;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-  if (/\d/.test(password)) strength++;
-  if (/[^a-zA-Z0-9]/.test(password)) strength++;
-  if (strength <= 2)
-    return { strength: 33, label: "Weak", color: "bg-red-500" };
-  if (strength <= 3)
-    return { strength: 66, label: "Medium", color: "bg-yellow-500" };
-  return { strength: 100, label: "Strong", color: "bg-green-500" };
-};
-
-interface SignupPageProps {
-  onLoginClick?: () => void;
-  onSignupSuccess?: () => void;
+interface LoginPageProps {
+  onSignupClick?: () => void;
+  onLoginSuccess?: () => void;
 }
 
-export default function SignupPage({
-  onLoginClick,
-  onSignupSuccess,
-}: SignupPageProps) {
-  const [fullName, setFullName] = useState("");
+export default function LoginPage({
+  onSignupClick,
+  onLoginSuccess,
+}: LoginPageProps) {
+  // --- STATE ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
 
-  const passwordStrength = getPasswordStrength(password);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: false, amount: 0.3 });
 
-  
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 8000);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
-
-  const handleLoginClick = (e: React.MouseEvent) => {
+  const handleSignupClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (onLoginClick) onLoginClick();
+    if (onSignupClick) onSignupClick();
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  // --- SUPABASE LOGIN LOGIC ---
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: {
-          full_name: fullName,
-          avatar_url: "",
-          bio: "",
-          phone: "",
-        },
-      },
     });
 
     if (error) {
       setErrorMsg(error.message);
+      setIsLoading(false);
     } else {
-      
-      if (data.user) {
-        try {
-          await supabase.from("profiles").upsert(
-            {
-              id: data.user.id,
-              full_name: fullName,
-              email: email,
-              avatar_url: "",
-              bio: "",
-              phone: "",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" },
-          );
-        } catch {
-          
-        }
-      }
-      setShowToast(true);
-      if (onSignupSuccess) onSignupSuccess();
+      console.log("Login success:", data);
+      if (onLoginSuccess) onLoginSuccess();
     }
-    setIsLoading(false);
   };
 
+  // --- GOOGLE OAUTH LOGIC ---
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) setErrorMsg(error.message);
+  };
 
   return (
     <div
       ref={ref}
-      id="signup-section"
-      className="grid min-h-svh bg-background lg:grid-cols-2 relative overflow-hidden"
+      id="login-section"
+      className="grid min-h-svh bg-background lg:grid-cols-2"
     >
-      {}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, x: 50 }}
-            animate={{ opacity: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed bottom-8 right-8 z-[100] w-full max-w-sm bg-background/80 backdrop-blur-xl border border-border shadow-2xl rounded-xl p-5 flex gap-4 items-start"
-          >
-            <div className="flex-shrink-0 w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#22c55e"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                Verify your email
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                A link was sent to{" "}
-                <span className="font-medium text-foreground">{email}</span>.
-                Please verify to continue.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowToast(false)}
-              className="text-muted-foreground hover:text-foreground transition-colors p-1"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <motion.div
         initial={{ opacity: 0, x: -50 }}
         animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
@@ -223,10 +125,9 @@ export default function SignupPage({
             />
           </div>
         </motion.div>
-
         <div className="flex flex-1 w-full items-center justify-center">
           <div className="w-full max-w-md">
-            <form className="flex flex-col gap-6" onSubmit={handleSignup}>
+            <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
               <FieldGroup>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -236,14 +137,16 @@ export default function SignupPage({
                   transition={{ duration: 0.6, delay: 0.3 }}
                   className="flex flex-col items-start gap-2.5 text-left mb-10"
                 >
+                  {/* FONT FIX: Removed font-display */}
                   <h1 className="text-5xl font-semibold tracking-tight leading-[1.1]">
-                    Start Your Journey
+                    Welcome Back
                   </h1>
                   <p className="text-muted-foreground font-normal text-base">
-                    Enter your details
+                    Login to continue
                   </p>
                 </motion.div>
 
+                {/* ERROR ALERT BOX */}
                 {errorMsg && (
                   <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-500 text-sm rounded-md">
                     {errorMsg}
@@ -258,23 +161,6 @@ export default function SignupPage({
                   transition={{ duration: 0.6, delay: 0.4 }}
                   className="space-y-6"
                 >
-                  <Field>
-                    <FieldLabel
-                      htmlFor="name"
-                      className="text-sm font-medium mb-2"
-                    >
-                      Full Name
-                    </FieldLabel>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="h-12 rounded-md border-border bg-background/80 shadow-sm focus-visible:ring-0 focus-visible:border-primary transition-colors"
-                    />
-                  </Field>
                   <Field>
                     <FieldLabel
                       htmlFor="email"
@@ -301,37 +187,19 @@ export default function SignupPage({
                     </FieldLabel>
                     <Input
                       id="password"
-                      placeholder="Create a password"
+                      placeholder="Enter your password"
                       type="password"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="h-12 rounded-md border-border bg-background/80 shadow-sm focus-visible:ring-0 focus-visible:border-primary transition-colors"
                     />
-                    <AnimatePresence>
-                      {password && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mt-2.5 space-y-1.5 overflow-hidden"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                              <motion.div
-                                animate={{
-                                  width: `${passwordStrength.strength}%`,
-                                }}
-                                className={`h-full ${passwordStrength.color}`}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground min-w-[60px]">
-                              {passwordStrength.label}
-                            </span>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <a
+                      href="#"
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2 inline-block"
+                    >
+                      Forgot password?
+                    </a>
                   </Field>
                   <Field>
                     <Button
@@ -339,12 +207,13 @@ export default function SignupPage({
                       disabled={isLoading}
                       className="w-full h-12 rounded-md shadow-sm font-semibold text-sm bg-primary hover:bg-primary/90 text-white transition-all mt-4"
                     >
-                      {isLoading ? "Creating Account..." : "Create Account"}
+                      {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
                   </Field>
                   <FieldSeparator>Or continue with</FieldSeparator>
                   <Field>
                     <Button
+                      onClick={handleGoogleLogin}
                       className="flex items-center justify-center gap-3 w-full h-12 rounded-md bg-background border border-border text-foreground hover:bg-muted/50 hover:border-border/80 shadow-sm font-medium text-sm transition-all"
                       type="button"
                     >
@@ -352,13 +221,13 @@ export default function SignupPage({
                       <span>Continue with Google</span>
                     </Button>
                     <FieldDescription className="text-center w-full mt-8 flex items-center justify-center text-sm">
-                      Already have an account?{" "}
+                      Don&apos;t have an account?{" "}
                       <a
                         href="#"
-                        onClick={handleLoginClick}
+                        onClick={handleSignupClick}
                         className="underline underline-offset-4 ml-1.5 font-semibold text-foreground hover:text-primary transition-colors"
                       >
-                        Log in
+                        Sign up
                       </a>
                     </FieldDescription>
                   </Field>

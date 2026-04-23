@@ -50,11 +50,11 @@ export function MorphingCardStack({
 
     if (Math.abs(offset.x) > SWIPE_THRESHOLD || Math.abs(swipe) > SWIPE_VELOCITY) {
       if (offset.x > 0) {
-        
+        // Swiped right - go to previous
         setDirection(-1)
         setActiveIndex((prev) => (prev - 1 + cards.length) % cards.length)
       } else {
-        
+        // Swiped left - go to next
         setDirection(1)
         setActiveIndex((prev) => (prev + 1) % cards.length)
       }

@@ -17,7 +17,7 @@ import {
   Globe,
 } from "lucide-react";
 
-
+// --- Types ---
 interface MapNode {
   id: string;
   label: string;
@@ -31,11 +31,11 @@ interface MapNode {
   isEditing?: boolean;
 }
 
-
+// Dashboard-matched palette
 const COLORS = ["#7209B7", "#F72585", "#4CC9F0", "#4361EE", "#B5179E"];
 const REPULSION_RADIUS = 280;
 
-
+// Helper for drawing curved Bezier paths between nodes
 const getCurvedPath = (
   startX: number,
   startY: number,
@@ -58,7 +58,7 @@ export default function MindMap() {
   const rootNode = nodes.find((n) => !n.parentId);
   const rootLabel = rootNode ? rootNode.label : "";
 
-  
+  // --- API LOGIC: Context-Aware Expansion ---
   const handleGenerate = async () => {
     if (isGenerating || !prompt.trim()) return;
     setIsGenerating(true);
@@ -129,7 +129,7 @@ export default function MindMap() {
     }
   };
 
-  
+  // --- API LOGIC: Bulk Deep Dive ---
   const bulkExpand = async () => {
     if (nodes.length === 0 || isGenerating) return;
 
@@ -190,7 +190,7 @@ export default function MindMap() {
     }
   };
 
-  
+  // --- LAYOUT ENGINE: Organic Radial Outward Growth ---
   const spawnNodes = (
     newTopics: any[],
     rootLabel: string,
@@ -212,7 +212,7 @@ export default function MindMap() {
           );
           if (grandParent) {
             baseAngle = Math.atan2(pY - grandParent.y, pX - grandParent.x);
-            arcSpread = Math.PI * 1.2; 
+            arcSpread = Math.PI * 1.2; // 216-degree fan outward
           }
         } else {
           baseAngle = Math.random() * Math.PI * 2;
@@ -273,7 +273,7 @@ export default function MindMap() {
     });
   };
 
-  
+  // Node editing & updating logic
   const updateNodePos = (id: string, dx: number, dy: number) => {
     setNodes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, x: n.x + dx, y: n.y + dy } : n)),
@@ -308,7 +308,7 @@ export default function MindMap() {
       x: pX + Math.cos(angle) * dist,
       y: pY + Math.sin(angle) * dist,
       color: "#FFFFFF",
-      isEditing: true, 
+      isEditing: true, // Instantly editable
     };
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeId(newNode.id);
@@ -319,7 +319,7 @@ export default function MindMap() {
       className="h-screen w-full bg-[#0c0515] text-white overflow-hidden relative font-sans"
       onClick={() => setSelectedNodeId(null)}
     >
-      {}
+      {/* Background: Static normally, Pulses only when generating */}
       <motion.div
         animate={
           isGenerating ? { opacity: [0.1, 0.8, 0.1] } : { opacity: 0.15 }
@@ -367,7 +367,7 @@ export default function MindMap() {
         </div>
       </header>
 
-      {}
+      {/* CANVAS DRAGGING */}
       <motion.div
         className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing"
         onPan={(e, info) =>
@@ -388,14 +388,14 @@ export default function MindMap() {
           className="w-full h-full origin-top-left"
           style={{ x: viewState.x, y: viewState.y, scale: viewState.zoom }}
         >
-          {}
+          {/* Curved, Glowing Edges */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
             {nodes.map((node) => {
               if (!node.parentId) return null;
               const parent = nodes.find((n) => n.id === node.parentId);
               if (!parent) return null;
 
-              
+              // If a node is selected, glow its connected pathways
               const isGlowing =
                 selectedNodeId === node.id || selectedNodeId === parent.id;
 
@@ -420,7 +420,7 @@ export default function MindMap() {
             })}
           </svg>
 
-          {}
+          {/* Nodes */}
           {nodes.map((node) => {
             const isFaded =
               selectedNodeId &&
@@ -455,7 +455,7 @@ export default function MindMap() {
         </motion.div>
       </motion.div>
 
-      {}
+      {/* Side Panel (Context-Aware DDGS & Wiki) */}
       <AnimatePresence>
         {selectedNode && !selectedNode.isEditing && (
           <SidePanel
@@ -466,7 +466,7 @@ export default function MindMap() {
         )}
       </AnimatePresence>
 
-      {}
+      {/* Smart Command Bar */}
       <footer
         className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
@@ -502,7 +502,7 @@ export default function MindMap() {
   );
 }
 
-
+// --- NODE COMPONENT (Edit on Double-Click, Floating Buttons Underneath) ---
 function NodeElement({
   node,
   zoom,
@@ -518,7 +518,7 @@ function NodeElement({
 }: any) {
   const [editValue, setEditValue] = useState(node.label);
 
-  
+  // Sync state if it becomes a new editable node
   useEffect(() => {
     setEditValue(node.label);
   }, [node.label]);
@@ -575,7 +575,7 @@ function NodeElement({
             </div>
           )}
 
-          {}
+          {/* Truncated description */}
           {node.description && !node.isEditing && (
             <p className="text-[10px] text-white/40 mt-2 line-clamp-1 border-t border-white/[0.04] pt-2">
               {node.description}
@@ -583,7 +583,7 @@ function NodeElement({
           )}
         </div>
 
-        {}
+        {/* Floating Action Buttons UNDER the card */}
         <div className="absolute top-[100%] left-1/2 -translate-x-1/2 pt-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
           <button
             onClick={(e) => {
@@ -615,7 +615,7 @@ function NodeElement({
   );
 }
 
-
+// --- SIDE PANEL COMPONENT ---
 function SidePanel({
   node,
   rootLabel,
@@ -657,7 +657,7 @@ function SidePanel({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 400, opacity: 0 }}
       className="absolute top-4 right-4 bottom-4 w-[360px] bg-[#140a25]/95 backdrop-blur-2xl border border-white/[0.12] rounded-2xl p-6 z-50 flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
-      onClick={(e) => e.stopPropagation()} 
+      onClick={(e) => e.stopPropagation()} // Prevent closing when interacting with panel
     >
       <button
         onClick={onClose}
