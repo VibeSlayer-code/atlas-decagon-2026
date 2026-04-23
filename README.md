@@ -1,3 +1,1 @@
-things done
-[+] login and signup page
-[+] dashboard
+hail core ❤️
